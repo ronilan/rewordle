@@ -1,0 +1,15 @@
+# do not include crumb interpreter
+crumb
+
+# apple
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+
+# thumbnails
+._*
+
+# files that might appear on external disk
+.Spotlight-V100
+.Trashes
