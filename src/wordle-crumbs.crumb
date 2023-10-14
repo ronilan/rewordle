@@ -1,0 +1,26 @@
+
+valid_words = (read_file "./data/valid.txt")
+state = (use "./usables/tui.crumb" "./usables/colors.crumb" "./src/elements.crumb" {
+  // initial state
+  ANSWER = 0
+  STATUS = 1
+  INPLAY = 2
+  USED = 3
+
+
+  state = (list 
+    "CRUMB" 
+    (list 
+      (list " " " " " " " " " ")
+      (list " " " " " " " " " ")
+      (list " " " " " " " " " ")
+      (list " " " " " " " " " ")
+      (list " " " " " " " " " ")
+      (list " " " " " " " " " ")
+    )
+    0
+    (list)
+  )
+
+  <- (start state elements)
+})

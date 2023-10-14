@@ -1,15 +1,29 @@
-# do not include crumb interpreter
-crumb
+# anything, anywhere starting with __
+__*
+~~*
 
-# apple
+# Local development
+*.env
+*.dev
+
+# Apple
 .DS_Store
 .AppleDouble
 .LSOverride
 Icon
 
-# thumbnails
+# Thumbnails
 ._*
 
-# files that might appear on external disk
+# Files that might appear on external disk
 .Spotlight-V100
 .Trashes
+
+# js
+node_modules/
+
+# in case
+.npmrc
+
+# do not include Crumb interpreter
+crumb

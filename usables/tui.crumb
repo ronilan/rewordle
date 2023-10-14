@@ -1,0 +1,177 @@
+// abstractions of escape codes
+hide_cursor = {
+  (print "\e[?25l")
+}
+
+show_cursor = {
+  (print "\e[?25h")
+}
+
+clear_below = {
+  (print "\e[0J")
+}
+
+// reset styling and jump to mouse_xy (0 0 is top left)
+go_to  = { x y ->
+ (print (join "\e[0;0m\e[" (string (add y 1)) ";" (string (add x 1)) "H"))
+}
+
+clear_screen = {
+  (go_to 0 0)
+  (clear_below)
+}
+
+// drawing elements
+draw = { props ->
+  // all calculations are on a screen where top left is 0, 0
+  // escape codes are on a system based on 1, 1
+  x = (add (get props 0) 1)
+  y = (add (get props 1) 1)
+
+  element_look = (get props 2)
+
+  // reset styling
+  // jump to mouse_xy
+  (go_to (subtract x 1) (subtract y 1))
+
+  // print string
+  (if (is (type element_look) "string") {
+    (print element_look)
+  } {
+    (if (is (type (get element_look 0)) "string") {
+      // print row by row
+      (loop (length element_look) { j ->
+        (print (get element_look j))
+        (print (join "\e[" (string (add y j 1)) ";" (string x) "H"))
+      })
+    } {
+      // print cell by cell
+      (loop (length element_look) { j ->
+        row = (get element_look j)
+        width = (length row)
+        (loop width { i ->
+          (print (get row i) )
+        })
+        // jump to position for each row
+        (print (join "\e[" (string (add y j 1)) ";" (string x) "H"))
+      })
+    })
+  })
+}
+
+start = { state elements ->
+  // ** utility function
+  list_to_string = { arr -> <- (reduce arr {accum item _ -> <- (join accum (string item))} "")}
+
+  string_to_list = { str -> <- (map (range (length str)) {index _ -> <- (get str index)}) }
+
+  string_pad_start = { str count padder -> 
+    <- (if (greater_than (add (length str) 1) count){
+      <- str
+    } {
+      <- (join (list_to_string (map (range (subtract count (length str))) {_ _ -> <- padder})) str)
+    })
+  }
+
+  string_pad_end = { str count padder -> 
+    <- (if (greater_than (add (length str) 1) count){
+      <- str
+    } {
+      <- (join str (list_to_string (map (range (subtract count (length str))) {_ _ -> <- padder})))
+    })
+  }
+
+  // mouse calculation
+  // props: a list describing x y width and height of clickable area
+  // mouse_xy: a list with current x y mouse position
+  mouse_over = { props mouse_xy ->
+    // deconstruct for readability
+    x = (get props 0)
+    y = (get props 1)
+    element_look = (get props 2)
+
+    // element look can be defined as a string, a list of strings or a list of lists.
+    // ignore any element that is not defined as a list of lists (cell grid) as the 
+    // strings may include style escape codes that alter their length
+    width = (if (not (is (type element_look) "list")) {
+      <- 0
+    } {
+      <- (if (not (is (type (get element_look 0)) "list")) {
+        <- 0
+      } {
+        <- (length (get element_look 0))
+      })
+    })
+
+    height = (length element_look)
+
+    row = (integer (get mouse_xy 1))
+    column = (integer (get mouse_xy 0))
+
+    // by calculating the position of on the screen 
+    // decide if the mouse is over the element. 
+    <- (if (and
+        (and 
+          (greater_than column (subtract x 1))
+          (less_than column (add x width 0))
+        )
+        (and 
+          (greater_than row (subtract y 1))
+          (less_than row (add y height 0))
+        )
+      )
+    {
+      <- 1
+    } {
+      <- 0
+    })
+  }
+
+  listeners = (map elements { element index ->
+    <- (if (is element void) {
+      <- (list void void void void void)
+      } {
+        defined_listeners = (get element 1)
+        <- (if (is defined_listeners void) {
+          <- (list void void void void void) 
+        } {
+          <- defined_listeners
+        })
+    })
+  })
+
+  // initial render
+  (loop (length listeners) { index -> 
+    element = (get elements index)
+    listener = (get listeners index)
+  
+    loop_count = 0 // listeners may use loop_count
+    fn = (get (get listeners index) 0) 
+    (if (not (is fn void)) {
+      (fn)
+    } {
+      (if (not (is element void)) {
+        props = (get element 0)
+        (if (not (is props void)) {
+          (draw props)
+        })
+      })
+    })
+
+  })
+
+  // event loop
+  result = (use "./usables/event-loop.crumb" { 
+    <- (start state listeners)
+  })
+
+  (clear_screen)
+  (show_cursor)
+
+  <- result
+}
+
+// whenever tui is used, even if not started hide cursor and clear screen
+// crumb shows cursor when exited
+(hide_cursor)
+(clear_screen)

@@ -1,0 +1,147 @@
+key_map = { sequence ->
+  kv_list = (list
+    "" "escape"
+    "[A" "up"
+    "[B" "down"
+    "[C" "right"
+    "[D" "left"
+    "[OP" "f1"
+    "[OQ" "f2"
+    "[OR" "f3"
+    "[OS" "f4"
+    "[15~" "f5"
+    "[17~" "f6"
+    "[18~" "f7"
+    "[19~" "f8"
+    "[20~" "f9"
+    "[21~" "f10"
+    "[24~" "f12"
+    "OP" "f1"
+    "OQ" "f2"
+    "OR" "f3"
+    "OS" "f4"
+  )
+
+  key = (if (greater_than (length sequence) 1) {
+      <- (get sequence 1 (length sequence))
+    } {
+      <- ""
+  })
+  pos = (find kv_list key)
+  value = (if (is pos void) {<-void} {<- (get kv_list (add pos 1))})
+
+  <- (if (is value void) {<- ""} {<- value})
+}
+
+// starts the event loop
+// returns the final state
+start = { state listeners ->
+
+  reduce_listeners = { event_index ->
+    <- (reduce listeners { new_state listener listener_index ->
+      <- (if (is listener void) {
+        <- new_state
+      } {
+        fn = (get listener event_index)
+        <- (if (is fn void) {
+          <- new_state
+        } {
+          // fn is working on scope variable named state
+          // update it to what was previously reduces
+          state = new_state
+          <- (if (is void state) {
+            <- void
+          } {
+            <- (fn)
+          })
+        })
+      })
+    } state)
+  }
+
+  // ** event loop
+  result = (until void {state loop_count ->
+    // save state
+    prev_state = state
+    // get current event
+    curr = (event)
+
+    // loop "synthetic event"
+    state = (reduce_listeners 1)
+
+    // keypress
+    state = (if (and (greater_than (length curr) 0) (less_than (length curr) 6)) {
+      keypress_name = (if (not (is (get curr 0) "\e")) {
+        <- (if (is curr "\x7f") {
+          <- "delete"
+        } {
+          <- curr
+        })
+      } {
+        <- (key_map curr)
+      })
+
+      <- (reduce_listeners 2)
+    } {<- state})
+
+    // mouse
+    state = (if (greater_than (length curr) 6) {
+        // base
+        // 0, 1, 2 - mouse button clicked (generally from left to right)
+        // 32 move - (35 means 32 + 3 button is "released")
+        // 64 scroll up  (64 means 64 + 0 button is pressed, thus scroll)
+        // modifiers
+        // +4 shift
+        // +8 meta
+        // +16 control
+        // e.g
+        // [<35;12;7M
+
+        <- (if (is (get curr 1 3) "[<") {
+          first_delimiter = (find curr ";")
+
+          mouse_code = (integer (get curr 3 first_delimiter))
+          mouse_row_column = (get curr (add first_delimiter 1) (subtract (length curr) 1))
+
+          second_delimiter = (find mouse_row_column ";")
+
+          mouse_xy = (list 
+            (subtract (integer (get mouse_row_column 0 second_delimiter)) 1)
+            (subtract (integer (get mouse_row_column (add 1 second_delimiter) (length mouse_row_column))) 1)
+          )
+
+          // mouse move
+          state = (reduce_listeners 3)
+
+          // mouse click (with modifiers)
+          state = (if (or 
+            (is mouse_code 0)
+            (is mouse_code 4)
+            (is mouse_code 8)
+            (is mouse_code 16)
+            (is mouse_code 32)
+            (is mouse_code 36)
+            (is mouse_code 40)
+            (is mouse_code 48)
+          ) {
+            <- (reduce_listeners 4)
+          } {<- state})
+
+          <- state
+        } {<- state})
+    } {<- state})
+
+    // state "synthetic event"
+    state = (if
+      (not (is prev_state state)
+    ) {
+      <- (reduce_listeners 0)
+    }{
+      <- state
+    })
+
+    <- state
+  } state)
+
+  <- result
+}

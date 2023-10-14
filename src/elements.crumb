@@ -1,0 +1,283 @@
+letters = "abcdefghijklmnopqrstuvwxyz"
+uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+set_background = { letter_status item ->
+  <- (if (is letter_status 2) {
+    // green
+    <- (background 2 item)
+  } (is letter_status 1) {
+    // yellow
+    <- (background 3 item)
+  } {
+    <- (background 8 item)
+  })
+}
+
+get_letter_status = { letter pos answer ->
+  <- (if (is pos void) {
+    <- 0
+  } {
+    <- (if (is (get answer pos) letter) {
+      // green
+      <- 2
+    } (not (is (find answer letter) void)) {
+      // yellow
+      <- 1
+    } {
+      <- 0
+    })
+  })
+}
+
+keyboard = ({
+  props = (list
+    30
+    10
+    (list 
+      (list "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐")
+      (list "│""Q""│" "│""W""│" "│""E""│" "│""R""│" "│""T""│" "│""Y""│" "│""U""│" "│""I""│" "│""O""│" "│""P""│")
+      (list "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘")
+      (list "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐")
+      (list "│"" ""│" "│""A""│" "│""S""│" "│""D""│" "│""F""│" "│""G""│" "│""H""│" "│""J""│" "│""K""│" "│""L""│")
+      (list "└"" ""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘")
+      (list "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐")
+      (list "│"" ""│" "│""↩""│" "│""Z""│" "│""X""│" "│""C""│" "│""V""│" "│""B""│" "│""N""│" "│""M""│" "│""⌫""│")
+      (list "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘")
+    )
+  )
+
+  props = (list
+    30
+    10
+    (list 
+      (list "Q" "W" "E" "R" "T" "Y" "U" "I" "O" "P")
+      (list " " "A" "S" "D" "F" "G" "H" "J" "K" "L")
+      (list " " "↩" "Z" "X" "C" "V" "B" "N" "M" "⌫")
+    )
+  )
+
+  on_state = {
+    props = (get keyboard 0)
+
+    mapped = (map (get props 2) {row row_index -> 
+      <- (map row { item index ->
+        <- (if (is item " ") {
+          <- " "
+        } {
+          <- (if (is (find uppercase item) void)  {
+            <- item
+          } {
+            letter = (find uppercase item)
+            status = (get state STATUS)
+
+            <- (if (is (find (get state USED) letter) void) {
+              <- item
+            } {
+              final_letter_status = (reduce (get state STATUS) {accum word_line index -> 
+                guessed_pos = (find word_line letter)
+                letter_status = (get_letter_status letter guessed_pos (get state ANSWER))
+
+                <- (if (greater_than letter_status accum){
+                  <- letter_status
+                }{
+                  <- accum
+                })
+              } 0)
+
+              <- (set_background final_letter_status letter)
+            })
+          })
+        })
+      })
+    })
+    
+    m = (reduce (get props 2) { row_accum row row_index -> 
+
+      formatted = { item letter ->
+        <- (if (is (find (get state USED) letter) void) {
+          <- item
+        } {
+          final_letter_status = (reduce (get state STATUS) {accum word_line index ->
+            <- (if (less_than index (get state INPLAY)) {
+              guessed_pos = (find word_line letter)
+              letter_status = (get_letter_status letter guessed_pos (get state ANSWER))
+
+              <- (if (greater_than letter_status accum){
+                <- letter_status
+              }{
+                <- accum
+              })
+            }{
+              <- accum
+            })
+
+          } 0)
+
+          <- (set_background final_letter_status item)
+        })
+      }
+
+      r = (reduce row {accum item index ->
+        letter = (get row index)
+        <- (if (is letter " ") {
+          <- (insert accum (join " "" "" "))
+        }{
+          <- (insert accum (formatted (join "│" item "│") (get row index)))
+        })
+      } (list))
+
+      t = (reduce row {accum item index ->
+        letter = (get row index)
+        <- (if (is letter " ") {
+          <- (insert accum (join " "" "" "))
+        }{
+          <- (insert accum (formatted (join "┌" "─" "┐") (get row index)))
+        })
+      } (list))
+
+      b = (reduce row {accum item index ->
+        letter = (get row index)
+        <- (if (is letter " ") {
+          <- (insert accum (join " "" "" "))
+        }{
+          <- (insert accum (formatted (join "└""─""┘") (get row index)))
+        })
+      } (list))
+
+      row_accum = (insert row_accum t)
+      row_accum = (insert row_accum r)
+      row_accum = (insert row_accum b)
+      
+      <- row_accum
+    } (list))
+    
+    (draw (set props m 2))
+
+    <- state
+  }
+
+  <- (list props (list on_state void void void void))
+})
+
+board = ({
+  props = (list
+    1
+    1
+    (list 
+      (list "┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐")
+      (list "│"" "" "" ""│""│"" "" "" ""│""│"" "" "" ""│""│"" "" "" ""│""│"" "" "" ""│")
+      (list "└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘")
+      (list "┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐")
+      (list "│"" "" "" ""│""│"" "" "" ""│""│"" "" "" ""│""│"" "" "" ""│""│"" "" "" ""│")
+      (list "└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘")
+      (list "┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐")
+      (list "│"" "" "" ""│""│"" "" "" ""│""│"" "" "" ""│""│"" "" "" ""│""│"" "" "" ""│")
+      (list "└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘")
+      (list "┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐")
+      (list "│"" "" "" ""│""│"" "" "" ""│""│"" "" "" ""│""│"" "" "" ""│""│"" "" "" ""│")
+      (list "└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘")
+      (list "┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐")
+      (list "│"" "" "" ""│""│"" "" "" ""│""│"" "" "" ""│""│"" "" "" ""│""│"" "" "" ""│")
+      (list "└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘")
+      (list "┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐")
+      (list "│"" "" "" ""│""│"" "" "" ""│""│"" "" "" ""│""│"" "" "" ""│""│"" "" "" ""│")
+      (list "└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘")
+    )
+  )
+
+  on_keypress = {
+      <- (if (is (get state INPLAY) 6) {
+        <- state
+      } {
+        // TODO: Check win
+        line_in_play = (get (get state STATUS) (get state INPLAY))
+        index = (find line_in_play " ")
+
+        <- (if (and (not (is (find letters keypress_name) void)) (not (is index void))){
+          // inserting letter
+          upperkeypress_name = (get uppercase (find letters keypress_name))
+          typed_in = (set line_in_play upperkeypress_name index)
+          status = (set (get state STATUS) typed_in (get state INPLAY))
+          
+          <- (set state status STATUS)
+        } (and (is keypress_name "\n") (is (find line_in_play " ") void)) {
+          // next line
+          // check word is valid
+          word = (reduce line_in_play { accum item index -> <- (join accum item) } "")
+          <- (if (is (find valid_words word) void) {
+            <- state
+          } {
+            used = (reduce line_in_play { accum item index ->
+              <- (if (is (find accum item) void) { <- (insert accum item) } { <- accum })
+            } (get state USED))
+
+            state = (set state used USED)
+            <- (set state (add (get state INPLAY) 1) INPLAY)
+          })
+        } (and (is keypress_name "delete") (not (is (get line_in_play 0) " "))) {
+          // deleting letter
+          typed_in = (if (not (is index void)) {
+            <- (set line_in_play " " (subtract index 1))
+          } {
+            <- (set line_in_play " " 4)
+          } )
+          status = (set (get state STATUS) typed_in (get state INPLAY))
+          <- (set state status STATUS)
+        } {
+          // any key not part of the game
+          <- state
+        })
+      })
+  }
+
+  on_state = {
+    props = (get board 0)
+
+    mapped = (map (get props 2) {row row_index -> 
+      <- (map row { item index ->
+        r =  (integer (divide row_index 3))
+        c =  (integer (divide index 5))
+        letter = (get (get (get state STATUS) r) c)
+
+        <- (if (and (is (remainder row_index 3) 1) (is (remainder index 5) 2) ) {
+          <- (if (is (get state INPLAY) r) {
+              <- (if (is letter " ") {
+                <- letter
+              } {
+                <- (get uppercase (find uppercase letter))
+              })
+          }{
+            <- (if (is letter " ") {
+              <- letter
+            } {
+              letter_status = (get_letter_status letter c (get state ANSWER))
+              <- (set_background letter_status (get uppercase (find uppercase letter)))
+            })
+          })
+        }{
+          <- (if (is (get state INPLAY) r) {
+            <- item
+          }{
+            <- (if (is letter " ") {
+              <- item
+            } {
+              letter_status = (get_letter_status letter c (get state ANSWER))
+              <- (set_background letter_status item)
+            })
+          })
+        })
+      })
+    })
+    
+    (draw (set props mapped 2))
+
+    <- state
+  }
+
+  <- (list props (list on_state void on_keypress void void))
+})
+
+elements = (list
+  keyboard
+  board
+)
