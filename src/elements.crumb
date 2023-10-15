@@ -1,5 +1,35 @@
-letters = "abcdefghijklmnopqrstuvwxyz"
-uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+
+
+keys = (list
+  (list "Q" "W" "E" "R" "T" "Y" "U" "I" "O" "P")
+  (list "A" "S" "D" "F" "G" "H" "J" "K" "L")
+  (list "Z" "X" "C" "V" "B" "N" "M" )
+)
+
+to_uppercase = { key -> 
+  lowercase = "abcdefghijklmnopqrstuvwxyz"
+  uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+  index = (find lowercase key)
+  <- (if (is index void){
+    <- key
+  }{
+    <- (get uppercase index) 
+  })
+}
+
+to_lowercase = { key -> 
+  lowercase = "abcdefghijklmnopqrstuvwxyz"
+  uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+  index = (find uppercase key)
+  <- (if (is index void){
+    <- key
+  }{
+    <- (get lowercase index) 
+  })
+}
 
 set_background = { letter_status item ->
   <- (if (is letter_status 2) {
@@ -29,134 +59,171 @@ get_letter_status = { letter pos answer ->
   })
 }
 
-keyboard = ({
-  props = (list
-    30
-    10
-    (list 
-      (list "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐")
-      (list "│""Q""│" "│""W""│" "│""E""│" "│""R""│" "│""T""│" "│""Y""│" "│""U""│" "│""I""│" "│""O""│" "│""P""│")
-      (list "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘")
-      (list "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐")
-      (list "│"" ""│" "│""A""│" "│""S""│" "│""D""│" "│""F""│" "│""G""│" "│""H""│" "│""J""│" "│""K""│" "│""L""│")
-      (list "└"" ""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘")
-      (list "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐" "┌""─""┐")
-      (list "│"" ""│" "│""↩""│" "│""Z""│" "│""X""│" "│""C""│" "│""V""│" "│""B""│" "│""N""│" "│""M""│" "│""⌫""│")
-      (list "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘" "└""─""┘")
-    )
-  )
+is_valid_key = { keypress_name ->
+  letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
+  <- (not (is (find letters keypress_name) void))
+}
+
+mutaute_state_on_input = { state keypress_name ->
+  <- (if (is (get state INPLAY) 6) {
+    // TODO end game things
+    <- state
+  } {
+    // TODO: Check win
+    line_in_play = (get (get state STATUS) (get state INPLAY))
+    index = (find line_in_play " ")
+    uppercase_keypress_name = (to_uppercase keypress_name)
+
+    <- (if (and (is_valid_key uppercase_keypress_name) (not (is index void))){
+      // inserting letter
+      typed_in = (set line_in_play uppercase_keypress_name index)
+      status = (set (get state STATUS) typed_in (get state INPLAY))
+      
+      <- (set state status STATUS)
+    } (and (is uppercase_keypress_name  "\n") (is (find line_in_play " ") void)) {
+      // next line
+      // check word is valid
+      word = (reduce line_in_play { accum item index -> <- (join accum item) } "")
+      <- (if (is (find valid_words word) void) {
+        <- state
+      } {
+        used = (reduce line_in_play { accum item index ->
+          <- (if (is (find accum item) void) { <- (insert accum item) } { <- accum })
+        } (get state USED))
+
+        state = (set state used USED)
+        <- (set state (add (get state INPLAY) 1) INPLAY)
+      })
+    } (and (is uppercase_keypress_name  "delete") (not (is (get line_in_play 0) " "))) {
+      // deleting letter
+      typed_in = (if (not (is index void)) {
+        <- (set line_in_play " " (subtract index 1))
+      } {
+        <- (set line_in_play " " 4)
+      } )
+      status = (set (get state STATUS) typed_in (get state INPLAY))
+      <- (set state status STATUS)
+    } {
+      // any key not part of the game
+      <- state
+    })
+  })
+}
+
+create_element_key = { x y letter ->
   props = (list
-    30
-    10
+    (add x 30)
+    (add y 10)
     (list 
-      (list "Q" "W" "E" "R" "T" "Y" "U" "I" "O" "P")
-      (list " " "A" "S" "D" "F" "G" "H" "J" "K" "L")
-      (list " " "↩" "Z" "X" "C" "V" "B" "N" "M" "⌫")
+      (list "┌""─""┐")
+      (list "│" letter "│")
+      (list "└""─""┘")
     )
   )
 
   on_state = {
-    props = (get keyboard 0)
+    element = (get elements listener_index)
+    props = (get element 0)
+    look = (get props 2)
+    letter = (get (get look 1) 1)
 
-    mapped = (map (get props 2) {row row_index -> 
-      <- (map row { item index ->
-        <- (if (is item " ") {
-          <- " "
-        } {
-          <- (if (is (find uppercase item) void)  {
-            <- item
-          } {
-            letter = (find uppercase item)
-            status = (get state STATUS)
 
-            <- (if (is (find (get state USED) letter) void) {
-              <- item
-            } {
-              final_letter_status = (reduce (get state STATUS) {accum word_line index -> 
-                guessed_pos = (find word_line letter)
-                letter_status = (get_letter_status letter guessed_pos (get state ANSWER))
+    look = (if (is (find (get state USED) letter) void) {
+      <- look
+    } {
+      final_letter_status = (reduce (get state STATUS) {accum word_line index ->
+        // only change key look after word is submitted
+        <- (if (less_than index (get state INPLAY)) {
+          guessed_pos = (find word_line letter)
+          letter_status = (get_letter_status letter guessed_pos (get state ANSWER))
 
-                <- (if (greater_than letter_status accum){
-                  <- letter_status
-                }{
-                  <- accum
-                })
-              } 0)
-
-              <- (set_background final_letter_status letter)
-            })
+          <- (if (greater_than letter_status accum){
+            <- letter_status
+          }{
+            <- accum
           })
+        }{
+          <- accum
         })
-      })
+      } 0)
+
+      <- (set_background final_letter_status look)
     })
-    
-    m = (reduce (get props 2) { row_accum row row_index -> 
 
-      formatted = { item letter ->
-        <- (if (is (find (get state USED) letter) void) {
-          <- item
-        } {
-          final_letter_status = (reduce (get state STATUS) {accum word_line index ->
-            <- (if (less_than index (get state INPLAY)) {
-              guessed_pos = (find word_line letter)
-              letter_status = (get_letter_status letter guessed_pos (get state ANSWER))
+    (draw (set props look 2))
+    <- state
+  }
 
-              <- (if (greater_than letter_status accum){
-                <- letter_status
-              }{
-                <- accum
-              })
-            }{
-              <- accum
-            })
+  on_click = {
+    element = (get elements listener_index)
+    props = (get element 0)
 
-          } 0)
+    <- (if (is (mouse_over props mouse_xy) 1) {
+      look = (get props 2)
+      letter = (get (get look 1) 1)
 
-          <- (set_background final_letter_status item)
-        })
-      }
-
-      r = (reduce row {accum item index ->
-        letter = (get row index)
-        <- (if (is letter " ") {
-          <- (insert accum (join " "" "" "))
-        }{
-          <- (insert accum (formatted (join "│" item "│") (get row index)))
-        })
-      } (list))
-
-      t = (reduce row {accum item index ->
-        letter = (get row index)
-        <- (if (is letter " ") {
-          <- (insert accum (join " "" "" "))
-        }{
-          <- (insert accum (formatted (join "┌" "─" "┐") (get row index)))
-        })
-      } (list))
-
-      b = (reduce row {accum item index ->
-        letter = (get row index)
-        <- (if (is letter " ") {
-          <- (insert accum (join " "" "" "))
-        }{
-          <- (insert accum (formatted (join "└""─""┘") (get row index)))
-        })
-      } (list))
-
-      row_accum = (insert row_accum t)
-      row_accum = (insert row_accum r)
-      row_accum = (insert row_accum b)
-      
-      <- row_accum
-    } (list))
-    
-    (draw (set props m 2))
+      <- (mutaute_state_on_input state letter)
+    } {
+      <- state
+    })
 
     <- state
   }
 
-  <- (list props (list on_state void void void void))
+  <- (list props (list on_state void void void on_click))
+}
+
+enter_key = ({
+  props = (list
+    30
+    16
+    (list 
+      (list "┌""─""─""─""┐")
+      (list "│"" ""↩"" ""│")
+      (list "└""─""─""─""┘")
+    )
+  )
+
+  on_click = {
+    props = (get enter_key 0)
+
+    <- (if (is (mouse_over props mouse_xy) 1) {
+      <- (mutaute_state_on_input state "\n")
+    } {
+      <- state
+    })
+
+    <- state
+  }
+
+  <- (list props (list void void void void on_click))
+})
+
+delete_key = ({
+  props = (list
+    56
+    16
+    (list 
+      (list "┌""─""─""┐")
+      (list "│"" ""⌫""│")
+      (list "└""─""─""┘")
+    )
+  )
+
+  on_click = {
+    props = (get delete_key 0)
+
+    <- (if (is (mouse_over props mouse_xy) 1) {
+      <- (mutaute_state_on_input state "delete")
+    } {
+      <- state
+    })
+
+    <- state
+  }
+
+  <- (list props (list void void void void on_click))
 })
 
 board = ({
@@ -186,48 +253,7 @@ board = ({
   )
 
   on_keypress = {
-      <- (if (is (get state INPLAY) 6) {
-        <- state
-      } {
-        // TODO: Check win
-        line_in_play = (get (get state STATUS) (get state INPLAY))
-        index = (find line_in_play " ")
-
-        <- (if (and (not (is (find letters keypress_name) void)) (not (is index void))){
-          // inserting letter
-          upperkeypress_name = (get uppercase (find letters keypress_name))
-          typed_in = (set line_in_play upperkeypress_name index)
-          status = (set (get state STATUS) typed_in (get state INPLAY))
-          
-          <- (set state status STATUS)
-        } (and (is keypress_name "\n") (is (find line_in_play " ") void)) {
-          // next line
-          // check word is valid
-          word = (reduce line_in_play { accum item index -> <- (join accum item) } "")
-          <- (if (is (find valid_words word) void) {
-            <- state
-          } {
-            used = (reduce line_in_play { accum item index ->
-              <- (if (is (find accum item) void) { <- (insert accum item) } { <- accum })
-            } (get state USED))
-
-            state = (set state used USED)
-            <- (set state (add (get state INPLAY) 1) INPLAY)
-          })
-        } (and (is keypress_name "delete") (not (is (get line_in_play 0) " "))) {
-          // deleting letter
-          typed_in = (if (not (is index void)) {
-            <- (set line_in_play " " (subtract index 1))
-          } {
-            <- (set line_in_play " " 4)
-          } )
-          status = (set (get state STATUS) typed_in (get state INPLAY))
-          <- (set state status STATUS)
-        } {
-          // any key not part of the game
-          <- state
-        })
-      })
+    <- (mutaute_state_on_input state keypress_name)
   }
 
   on_state = {
@@ -244,14 +270,14 @@ board = ({
               <- (if (is letter " ") {
                 <- letter
               } {
-                <- (get uppercase (find uppercase letter))
+                <- letter
               })
           }{
             <- (if (is letter " ") {
               <- letter
             } {
               letter_status = (get_letter_status letter c (get state ANSWER))
-              <- (set_background letter_status (get uppercase (find uppercase letter)))
+              <- (set_background letter_status letter)
             })
           })
         }{
@@ -277,7 +303,12 @@ board = ({
   <- (list props (list on_state void on_keypress void void))
 })
 
-elements = (list
-  keyboard
-  board
-)
+kb = (reduce keys { line_accum key_line line_index ->
+  <- (reduce key_line { accum item index -> 
+    <- (insert accum (create_element_key (add (multiply line_index 2) (integer (divide line_index 2)) (multiply index 3)) (multiply line_index 3) item)) 
+  } line_accum)
+} (list))
+kb = (insert kb enter_key)
+kb = (insert kb delete_key)
+
+elements = (insert kb board)
