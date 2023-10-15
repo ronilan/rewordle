@@ -2,14 +2,25 @@
 valid_words = (read_file "./data/valid.txt")
 state = (use "./usables/tui.crumb" "./usables/colors.crumb" "./src/elements.crumb" {
   // initial state
-  ANSWER = 0
-  STATUS = 1
-  INPLAY = 2
-  USED = 3
+  APP_XY = 0
+  ANSWER = 1
+  STATUS = 2
+  INPLAY = 3
+  USED = 4
 
+    X = 0
+    Y = 1
+    
+    x = (integer (divide (subtract (columns) app_width) 2)) // center position on x
+    y = (integer (divide (subtract (rows) app_height) 2)) // center position on y
+
+    // choose a random word
+    l = (integer (divide (add (length valid_words) 1) 6))
+    i = (multiply (integer (multiply (random) l)) 6)
 
   state = (list 
-    "CRUMB" 
+    (list x y) // screen anchor
+    (get valid_words i (add i 5))
     (list 
       (list " " " " " " " " " ")
       (list " " " " " " " " " ")
@@ -24,3 +35,4 @@ state = (use "./usables/tui.crumb" "./usables/colors.crumb" "./src/elements.crum
 
   <- (start state elements)
 })
+

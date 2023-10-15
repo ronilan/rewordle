@@ -1,5 +1,32 @@
+//*** utility functions shared by event functions
 
+// returns a props list where x and y are in relation to the app's x y
+// and the look is either as supplied or as default for element.
+// used by all elements
+dynamic_props = { element look ->
+  <-(if (is (type state) "string" ){
+    <- (list 0 0 "")
+  }{
+    xy = (get state APP_XY)
+    props = (get element 0)
 
+    x = (add (get xy 0) (get props 0))
+    y = (add (get xy 1) (get props 1))
+
+    <- (if (or
+      (less_than (get (get state APP_XY) X) 0)
+      (less_than (get (get state APP_XY) Y) 0)
+    ) {
+      <- (list x y "")
+    } {
+      <- (if (is look void) {
+        <- (list x y (get (get element 0) 2))
+      } {
+        <- (list x y look)
+      })
+    })
+  })
+}
 
 keys = (list
   (list "Q" "W" "E" "R" "T" "Y" "U" "I" "O" "P")
@@ -31,6 +58,7 @@ to_lowercase = { key ->
   })
 }
 
+// game rules
 set_background = { letter_status item ->
   <- (if (is letter_status 2) {
     // green
@@ -86,6 +114,8 @@ mutaute_state_on_input = { state keypress_name ->
       // check word is valid
       word = (reduce line_in_play { accum item index -> <- (join accum item) } "")
       <- (if (is (find valid_words word) void) {
+        // not valid
+        // TODO: animate
         <- state
       } {
         used = (reduce line_in_play { accum item index ->
@@ -111,10 +141,85 @@ mutaute_state_on_input = { state keypress_name ->
   })
 }
 
+//***  settings
+app_width = 80
+app_height = 24
+
+//***  elements
+centered_modal = ({
+  props = (list 0 0 "")
+
+  on_state = {
+    (if (or
+      (less_than (get (get state APP_XY) X) 0)
+      (less_than (get (get state APP_XY) Y) 0)
+    ) {
+      look = (map (range (subtract (rows) 0)) { _ index ->
+        <- (if (is index (integer (divide (rows) 2))) {
+          r = (map (range (subtract (columns) 0)) { _ _ -> <- " " })
+          point = (subtract (integer (divide (columns) 2)) 12)
+          point = (if (less_than point 0) {
+            <- 0
+          }{
+            <- point
+          })
+          <- (set r "Enlarge Terminal Window" point)
+        } {
+          <- (map (range (subtract (columns) 0)) { _ _ ->
+            <- " "
+          })
+        })
+      })
+
+      (draw (list 0 0 look))
+    } {
+      (draw (list 0 0 ""))
+    })
+
+    <- state
+  }
+
+  <- (list void (list on_state void void void void))
+})
+
+// utility element with no visible look.
+// clears screen on resize, handles app exit, "mouse out" of pickers.
+screen = ({
+  props = (list 
+    0
+    0
+    "................................................................................"
+  )
+
+  on_loop = {
+    x = (integer (divide (subtract (columns) app_width) 2)) // center position on x
+    y = (integer (divide (subtract (rows) app_height) 2))// center position on y
+
+    curr = (list x y)
+
+    <- (if (is curr (get state APP_XY)){
+      <- state
+    } {
+      (go_to 0 2)
+      (clear_below)
+
+      <- (set state (list x y) APP_XY)
+    })
+  }
+
+  on_state = {
+    (draw (dynamic_props screen void))
+    <- state
+  }
+
+  <- (list props (list on_state on_loop void void void))
+})
+
+
 create_element_key = { x y letter ->
   props = (list
-    (add x 30)
-    (add y 10)
+    (add x 40)
+    (add y 12)
     (list 
       (list "┌""─""┐")
       (list "│" letter "│")
@@ -151,13 +256,14 @@ create_element_key = { x y letter ->
       <- (set_background final_letter_status look)
     })
 
-    (draw (set props look 2))
+    (draw (dynamic_props element look))
+
     <- state
   }
 
   on_click = {
     element = (get elements listener_index)
-    props = (get element 0)
+    props = (dynamic_props element void)
 
     <- (if (is (mouse_over props mouse_xy) 1) {
       look = (get props 2)
@@ -176,8 +282,8 @@ create_element_key = { x y letter ->
 
 enter_key = ({
   props = (list
-    30
-    16
+    40
+    18
     (list 
       (list "┌""─""─""─""┐")
       (list "│"" ""↩"" ""│")
@@ -185,8 +291,13 @@ enter_key = ({
     )
   )
 
+  on_state = {
+    (draw (dynamic_props enter_key void))
+    <- state
+  }
+
   on_click = {
-    props = (get enter_key 0)
+    props = (dynamic_props enter_key void)
 
     <- (if (is (mouse_over props mouse_xy) 1) {
       <- (mutaute_state_on_input state "\n")
@@ -197,13 +308,13 @@ enter_key = ({
     <- state
   }
 
-  <- (list props (list void void void void on_click))
+  <- (list props (list on_state void void void on_click))
 })
 
 delete_key = ({
   props = (list
-    56
-    16
+    66
+    18
     (list 
       (list "┌""─""─""┐")
       (list "│"" ""⌫""│")
@@ -211,8 +322,13 @@ delete_key = ({
     )
   )
 
+  on_state = {
+    (draw (dynamic_props delete_key void))
+    <- state
+  }
+
   on_click = {
-    props = (get delete_key 0)
+    props = (dynamic_props delete_key void)
 
     <- (if (is (mouse_over props mouse_xy) 1) {
       <- (mutaute_state_on_input state "delete")
@@ -223,13 +339,13 @@ delete_key = ({
     <- state
   }
 
-  <- (list props (list void void void void on_click))
+  <- (list props (list on_state void void void on_click))
 })
 
 board = ({
   props = (list
-    1
-    1
+    9
+    3
     (list 
       (list "┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐")
       (list "│"" "" "" ""│""│"" "" "" ""│""│"" "" "" ""│""│"" "" "" ""│""│"" "" "" ""│")
@@ -294,8 +410,8 @@ board = ({
         })
       })
     })
-    
-    (draw (set props mapped 2))
+
+    (draw (dynamic_props board mapped))
 
     <- state
   }
@@ -303,12 +419,40 @@ board = ({
   <- (list props (list on_state void on_keypress void void))
 })
 
+answer = ({
+  props = (list
+    53
+    3
+    "?????"
+  )
+
+  on_state = {
+    (if (is (get state INPLAY) 6) {
+      (draw (dynamic_props answer (get state ANSWER)))
+    } {
+      (draw (dynamic_props answer void))
+    })
+
+    <- state
+  }
+
+  <- (list props (list on_state void void void void))
+})
+
 kb = (reduce keys { line_accum key_line line_index ->
   <- (reduce key_line { accum item index -> 
     <- (insert accum (create_element_key (add (multiply line_index 2) (integer (divide line_index 2)) (multiply index 3)) (multiply line_index 3) item)) 
   } line_accum)
 } (list))
+
 kb = (insert kb enter_key)
 kb = (insert kb delete_key)
 
-elements = (insert kb board)
+el = (list 
+  screen 
+  centered_modal
+  board
+  answer
+)
+
+elements = (join kb el)
