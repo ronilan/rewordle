@@ -34,6 +34,8 @@ keys = (list
   (list "Z" "X" "C" "V" "B" "N" "M" )
 )
 
+stats = (list "1" "2" "3" "4" "5" "6")
+
 to_uppercase = { key -> 
   lowercase = "abcdefghijklmnopqrstuvwxyz"
   uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -72,6 +74,8 @@ set_background = { letter_status item ->
 }
 
 get_letter_status = { letter pos answer ->
+  // TODO: fix ambering of repeated letters
+  // letter status is in relation to whole word not letter by letter
   <- (if (is pos void) {
     <- 0
   } {
@@ -94,11 +98,7 @@ is_valid_key = { keypress_name ->
 }
 
 mutaute_state_on_input = { state keypress_name ->
-  <- (if (is (get state INPLAY) 6) {
-    // TODO end game things
-    <- state
-  } {
-    // TODO: Check win
+  <- (if (is (get state GAME) 0) { // in play
     line_in_play = (get (get state STATUS) (get state INPLAY))
     index = (find line_in_play " ")
     uppercase_keypress_name = (to_uppercase keypress_name)
@@ -123,7 +123,15 @@ mutaute_state_on_input = { state keypress_name ->
         } (get state USED))
 
         state = (set state used USED)
-        <- (set state (add (get state INPLAY) 1) INPLAY)
+        state = (set state (add (get state INPLAY) 1) INPLAY)
+
+        <- (if (is word (get state ANSWER)) { // win
+          <-(set state 1 GAME)
+        } (is (get state INPLAY) 5) { // last attempt - lost
+          <- (set state 2 GAME)
+        } {
+          <- state
+        })
       })
     } (and (is uppercase_keypress_name  "delete") (not (is (get line_in_play 0) " "))) {
       // deleting letter
@@ -138,6 +146,8 @@ mutaute_state_on_input = { state keypress_name ->
       // any key not part of the game
       <- state
     })
+  } {
+    <- state
   })
 }
 
@@ -188,7 +198,7 @@ screen = ({
   props = (list 
     0
     0
-    "................................................................................"
+    ""
   )
 
   on_loop = {
@@ -215,6 +225,49 @@ screen = ({
   <- (list props (list on_state on_loop void void void))
 })
 
+// top title bar, resizable but not moving.
+title = ({
+  on_state = {
+    look = (reduce (range (columns)) {accum _ _ -> <- (join accum " ") } "")
+    look = (set look "re:Wordle"  0)
+    look = (inverse look)
+
+    (draw (list 0 0 look))
+    <- state
+  }
+
+  <- (list void (list on_state void void void void))
+})
+
+button_exit = ({
+  props = (list
+    0
+    0
+    // the look of  clickable elements must be in form of a 2d list
+    (list
+     (underline (list "E" "x" "i" "t"))
+    )
+  )
+
+  on_state = {
+    look = (get (get button_exit 0) 2)
+
+    (draw (list (subtract (columns) 4) 0 look))
+    <- state
+  }
+
+  on_click = {
+    props = (list (subtract (columns) 4) 0 look)
+
+    <- (if (is (mouse_over props mouse_xy) 1) {
+      <- void
+    } {
+      <- state
+    })
+  }
+
+  <- (list props (list on_state void void void on_click))
+})
 
 create_element_key = { x y letter ->
   props = (list
@@ -233,30 +286,39 @@ create_element_key = { x y letter ->
     look = (get props 2)
     letter = (get (get look 1) 1)
 
-
-    look = (if (is (find (get state USED) letter) void) {
-      <- look
+    // only redrew when change is relevant
+    curr = (list (get state USED) (get state APP_XY))
+    prev = (if (is prev_state void) {
+      <- void
     } {
-      final_letter_status = (reduce (get state STATUS) {accum word_line index ->
-        // only change key look after word is submitted
-        <- (if (less_than index (get state INPLAY)) {
-          guessed_pos = (find word_line letter)
-          letter_status = (get_letter_status letter guessed_pos (get state ANSWER))
+      <- (list (get prev_state USED) (get prev_state APP_XY))
+    })
 
-          <- (if (greater_than letter_status accum){
-            <- letter_status
+    (if (not (is curr prev)) {
+      look = (if (is (find (get state USED) letter) void) {
+        <- look
+      } {
+        final_letter_status = (reduce (get state STATUS) {accum word_line index ->
+          // only change key look after word is submitted
+          <- (if (less_than index (get state INPLAY)) {
+            guessed_pos = (find word_line letter)
+            letter_status = (get_letter_status letter guessed_pos (get state ANSWER))
+
+            <- (if (greater_than letter_status accum){
+              <- letter_status
+            }{
+              <- accum
+            })
           }{
             <- accum
           })
-        }{
-          <- accum
-        })
-      } 0)
+        } 0)
 
-      <- (set_background final_letter_status look)
+        <- (set_background final_letter_status look)
+      })
+
+      (draw (dynamic_props element look))
     })
-
-    (draw (dynamic_props element look))
 
     <- state
   }
@@ -292,7 +354,18 @@ enter_key = ({
   )
 
   on_state = {
-    (draw (dynamic_props enter_key void))
+    // only redrew when change is relevant
+    curr = (list (get state USED) (get state APP_XY))
+    prev = (if (is prev_state void) {
+      <- void
+    } {
+      <- (list (get prev_state USED) (get prev_state APP_XY))
+    })
+
+    (if (not (is curr prev)) {
+      (draw (dynamic_props enter_key void))
+    })
+
     <- state
   }
 
@@ -323,7 +396,18 @@ delete_key = ({
   )
 
   on_state = {
-    (draw (dynamic_props delete_key void))
+    // only redrew when change is relevant
+    curr = (list (get state USED) (get state APP_XY))
+    prev = (if (is prev_state void) {
+      <- void
+    } {
+      <- (list (get prev_state USED) (get prev_state APP_XY))
+    })
+
+    (if (not (is curr prev)) {
+      (draw (dynamic_props delete_key void))
+    })
+
     <- state
   }
 
@@ -420,6 +504,7 @@ board = ({
 })
 
 answer = ({
+  // 1: Genius 2: Magnificent 3: Impressive 4: Splendid 5: Great 6: Phew
   props = (list
     53
     3
@@ -427,7 +512,7 @@ answer = ({
   )
 
   on_state = {
-    (if (is (get state INPLAY) 6) {
+    (if (not (is (get state GAME) 0)) {
       (draw (dynamic_props answer (get state ANSWER)))
     } {
       (draw (dynamic_props answer void))
@@ -439,6 +524,50 @@ answer = ({
   <- (list props (list on_state void void void void))
 })
 
+results = ({
+  props = (list
+    55
+    5
+    (list
+      "Played: 0" 
+      "Win %: 0"
+      "Current Streak: 0"
+      "Max Streak: 0"
+    )
+  )
+
+  on_state = {
+    (draw (dynamic_props results void))
+
+    <- state
+  }
+
+  <- (list props (list on_state void void void void))
+})
+
+create_bar_element = { x y what num ->
+  props = (list
+    (add x 40)
+    (add y 5)
+    (join what " " (inverse "") (inverse (string num)))
+  )
+
+  on_state = {
+    element = (get elements listener_index)
+    props = (get element 0)
+    look = (get props 2)
+    index = (subtract (integer (get (get props 2) 0)) 1)
+
+
+    look = (join (string (add index 1)) " " (inverse "     ") (inverse (string (get (get state RESULTS) index))))
+    (draw (dynamic_props element look))
+
+    <- state
+  }
+
+  <- (list props (list on_state void void void void))
+}
+
 kb = (reduce keys { line_accum key_line line_index ->
   <- (reduce key_line { accum item index -> 
     <- (insert accum (create_element_key (add (multiply line_index 2) (integer (divide line_index 2)) (multiply index 3)) (multiply line_index 3) item)) 
@@ -448,11 +577,18 @@ kb = (reduce keys { line_accum key_line line_index ->
 kb = (insert kb enter_key)
 kb = (insert kb delete_key)
 
+graphs = (reduce stats { accum item index -> 
+  <- (insert accum (create_bar_element 0 index item 0)) 
+} (list))
+
 el = (list 
-  screen 
+  screen
   centered_modal
+  title
+  button_exit
   board
   answer
+  results
 )
 
-elements = (join kb el)
+elements = (join kb graphs el)

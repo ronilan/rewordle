@@ -1,1 +1,41 @@
-(use "./src/wordle-crumbs.crumb" {})
+valid_words = (read_file "./data/valid.txt")
+
+state = (use "./usables/tui.crumb" "./usables/colors.crumb" "./src/elements.crumb" {
+  // initial state
+  APP_XY = 0
+  GAME = 1
+  ANSWER = 2
+  STATUS = 3
+  INPLAY = 4
+  USED = 5
+  RESULTS = 6
+
+  X = 0
+  Y = 1
+
+  x = (integer (divide (subtract (columns) app_width) 2)) // center position on x
+  y = (integer (divide (subtract (rows) app_height) 2)) // center position on y
+
+  // choose a random word
+  l = (integer (divide (add (length valid_words) 1) 6))
+  i = (multiply (integer (multiply (random) l)) 6)
+
+  state = (list
+    (list x y) // screen anchor
+    0 // the game status: 0 = in play, 1 = won, 2 = lost
+    (get valid_words i (add i 5)) // word in play
+    (list
+      (list " " " " " " " " " ")
+      (list " " " " " " " " " ")
+      (list " " " " " " " " " ")
+      (list " " " " " " " " " ")
+      (list " " " " " " " " " ")
+      (list " " " " " " " " " ")
+    )
+    0
+    (list)
+    (list 4 5 7 0 9 0 0)
+  )
+
+  <- (start state elements)
+})
