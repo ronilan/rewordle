@@ -28,13 +28,11 @@ dynamic_props = { element look ->
   })
 }
 
-keys = (list
-  (list "Q" "W" "E" "R" "T" "Y" "U" "I" "O" "P")
-  (list "A" "S" "D" "F" "G" "H" "J" "K" "L")
-  (list "Z" "X" "C" "V" "B" "N" "M" )
-)
+sum = { arr ->
+  <- (reduce arr {accum item _ -> <- (add accum item)} 0)
+}
 
-stats = (list "1" "2" "3" "4" "5" "6")
+
 
 to_uppercase = { key -> 
   lowercase = "abcdefghijklmnopqrstuvwxyz"
@@ -99,14 +97,15 @@ is_valid_key = { keypress_name ->
 
 mutaute_state_on_input = { state keypress_name ->
   <- (if (is (get state GAME) 0) { // in play
-    line_in_play = (get (get state STATUS) (get state INPLAY))
+    index_in_play = (get state INPLAY)
+    line_in_play = (get (get state STATUS) index_in_play)
     index = (find line_in_play " ")
     uppercase_keypress_name = (to_uppercase keypress_name)
 
     <- (if (and (is_valid_key uppercase_keypress_name) (not (is index void))){
       // inserting letter
       typed_in = (set line_in_play uppercase_keypress_name index)
-      status = (set (get state STATUS) typed_in (get state INPLAY))
+      status = (set (get state STATUS) typed_in index_in_play)
       
       <- (set state status STATUS)
     } (and (is uppercase_keypress_name  "\n") (is (find line_in_play " ") void)) {
@@ -122,16 +121,20 @@ mutaute_state_on_input = { state keypress_name ->
           <- (if (is (find accum item) void) { <- (insert accum item) } { <- accum })
         } (get state USED))
 
-        state = (set state used USED)
-        state = (set state (add (get state INPLAY) 1) INPLAY)
-
-        <- (if (is word (get state ANSWER)) { // win
-          <-(set state 1 GAME)
+        state =  (if (is word (get state ANSWER)) { // win
+          results = (get state RESULTS)
+          state = (set state (set results (add (get results index_in_play) 1 ) index_in_play ) RESULTS)
+          
+          <- (set state 1 GAME)
         } (is (get state INPLAY) 5) { // last attempt - lost
           <- (set state 2 GAME)
         } {
           <- state
         })
+
+        state = (set state used USED)
+        state = (set state (add index_in_play 1) INPLAY)
+        <- state
       })
     } (and (is uppercase_keypress_name  "delete") (not (is (get line_in_play 0) " "))) {
       // deleting letter
@@ -229,7 +232,7 @@ screen = ({
 title = ({
   on_state = {
     look = (reduce (range (columns)) {accum _ _ -> <- (join accum " ") } "")
-    look = (set look "re:Wordle"  0)
+    look = (set look "Rewordle"  0)
     look = (inverse look)
 
     (draw (list 0 0 look))
@@ -257,6 +260,7 @@ button_exit = ({
   }
 
   on_click = {
+    look = (get (get button_exit 0) 2)
     props = (list (subtract (columns) 4) 0 look)
 
     <- (if (is (mouse_over props mouse_xy) 1) {
@@ -512,10 +516,20 @@ answer = ({
   )
 
   on_state = {
-    (if (not (is (get state GAME) 0)) {
-      (draw (dynamic_props answer (get state ANSWER)))
+    // only redrew when change is relevant
+    curr = (list (get state USED) (get state APP_XY))
+    prev = (if (is prev_state void) {
+      <- void
     } {
-      (draw (dynamic_props answer void))
+      <- (list (get prev_state USED) (get prev_state APP_XY))
+    })
+
+    (if (not (is curr prev)) {
+      (if (not (is (get state GAME) 0)) {
+        (draw (dynamic_props answer (get state ANSWER)))
+      } {
+        (draw (dynamic_props answer void))
+      })
     })
 
     <- state
@@ -536,8 +550,34 @@ results = ({
     )
   )
 
+
   on_state = {
-    (draw (dynamic_props results void))
+    // only redrew when change is relevant
+    curr = (list (get state USED) (get state APP_XY))
+    prev = (if (is prev_state void) {
+      <- void
+    } {
+      <- (list (get prev_state USED) (get prev_state APP_XY))
+    })
+
+    (if (not (is curr prev)) {
+      r = (get state RESULTS)
+      p = (sum r)
+      win% = (if (greater_than p 0) {
+        <- (integer (multiply (divide (subtract p (get r 6)) p) 100))
+      } {
+        <- 0
+      })
+
+      look = (list
+        (join "Played: " (string p)) 
+        (join "Win %: " (string win%))
+        "Current Streak: 0"
+        "Max Streak: 0"
+      )
+
+      (draw (dynamic_props results look))
+    })
 
     <- state
   }
@@ -558,7 +598,6 @@ create_bar_element = { x y what num ->
     look = (get props 2)
     index = (subtract (integer (get (get props 2) 0)) 1)
 
-
     look = (join (string (add index 1)) " " (inverse "     ") (inverse (string (get (get state RESULTS) index))))
     (draw (dynamic_props element look))
 
@@ -568,6 +607,12 @@ create_bar_element = { x y what num ->
   <- (list props (list on_state void void void void))
 }
 
+keys = (list
+  (list "Q" "W" "E" "R" "T" "Y" "U" "I" "O" "P")
+  (list "A" "S" "D" "F" "G" "H" "J" "K" "L")
+  (list "Z" "X" "C" "V" "B" "N" "M" )
+)
+
 kb = (reduce keys { line_accum key_line line_index ->
   <- (reduce key_line { accum item index -> 
     <- (insert accum (create_element_key (add (multiply line_index 2) (integer (divide line_index 2)) (multiply index 3)) (multiply line_index 3) item)) 
@@ -576,6 +621,9 @@ kb = (reduce keys { line_accum key_line line_index ->
 
 kb = (insert kb enter_key)
 kb = (insert kb delete_key)
+
+
+stats = (list "1" "2" "3" "4" "5" "6")
 
 graphs = (reduce stats { accum item index -> 
   <- (insert accum (create_bar_element 0 index item 0)) 

@@ -9,6 +9,7 @@ state = (use "./usables/tui.crumb" "./usables/colors.crumb" "./src/elements.crum
   INPLAY = 4
   USED = 5
   RESULTS = 6
+  STREAK = 7
 
   X = 0
   Y = 1
@@ -23,7 +24,7 @@ state = (use "./usables/tui.crumb" "./usables/colors.crumb" "./src/elements.crum
   state = (list
     (list x y) // screen anchor
     0 // the game status: 0 = in play, 1 = won, 2 = lost
-    (get valid_words i (add i 5)) // word in play
+    "CRUMB" //(get valid_words i (add i 5)) // word in play
     (list
       (list " " " " " " " " " ")
       (list " " " " " " " " " ")
@@ -34,7 +35,8 @@ state = (use "./usables/tui.crumb" "./usables/colors.crumb" "./src/elements.crum
     )
     0
     (list)
-    (list 4 5 7 0 9 0 0)
+    (list 0 0 0 0 0 0 0)
+    (list 0 0)
   )
 
   <- (start state elements)
