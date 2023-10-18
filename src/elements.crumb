@@ -313,6 +313,10 @@ button_next = ({
       props = (dynamic_props button_next void)
 
       <- (if (is (mouse_over props mouse_xy) 1) {
+        // choose a random word
+        l = (integer (divide (add (length valid_words) 1) 6))
+        i = (multiply (integer (multiply (random) l)) 6)
+  
         state = (set state 0 GAME)
         state = (set state (get valid_words i (add i 5)) ANSWER) // word in play)
         state = (set state     (list

@@ -61,8 +61,8 @@ state = (use "./usables/tui.crumb" "./usables/colors.crumb" "./src/elements.crum
     )
     0
     (list)
-    r
-    s
+    (list 0 0 0 0 0 0 0)
+    (list 0 0)
   )
 
   <- (start state elements)
