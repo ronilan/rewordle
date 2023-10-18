@@ -21,7 +21,14 @@ split = {in sep ->
 
 valid_words = (read_file "./data/valid.txt")
 
-from_file = (split (read_file "./data/.rewordle") "\n")
+f = (read_file "./data/.rewordle")
+
+from_file =  (if (is f void) {
+  <- (list "0:0:0:0:0:0:0" "0:0")
+} {
+  <- (split f "\n")
+})
+
 
 // initial state
 APP_XY = 0
@@ -61,8 +68,8 @@ state = (use "./usables/tui.crumb" "./usables/colors.crumb" "./src/elements.crum
     )
     0
     (list)
-    (list 0 0 0 0 0 0 0)
-    (list 0 0)
+    r
+    s
   )
 
   <- (start state elements)
