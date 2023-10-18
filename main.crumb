@@ -37,6 +37,9 @@ X = 0
 Y = 1
 
 state = (use "./usables/tui.crumb" "./usables/colors.crumb" "./src/elements.crumb" {
+  r = (map (split (get from_file 0) ":") { item _ -> <- (integer item)})
+  s = (map (split (get from_file 1) ":") { item _ -> <- (integer item)})
+
   x = (integer (divide (subtract (columns) app_width) 2)) // center position on x
   y = (integer (divide (subtract (rows) app_height) 2)) // center position on y
 
@@ -47,7 +50,7 @@ state = (use "./usables/tui.crumb" "./usables/colors.crumb" "./src/elements.crum
   state = (list
     (list x y) // screen anchor
     0 // the game status: 0 = in play, 1 = won, 2 = lost
-    "CRUMB" //(get valid_words i (add i 5)) // word in play
+    (get valid_words i (add i 5)) // word in play
     (list
       (list " " " " " " " " " ")
       (list " " " " " " " " " ")
@@ -58,8 +61,8 @@ state = (use "./usables/tui.crumb" "./usables/colors.crumb" "./src/elements.crum
     )
     0
     (list)
-    (map (split (get from_file 0) ":") { item _ -> <- (integer item)})
-    (map (split (get from_file 1) ":") { item _ -> <- (integer item)})
+    r
+    s
   )
 
   <- (start state elements)

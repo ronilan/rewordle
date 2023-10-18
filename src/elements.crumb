@@ -32,7 +32,9 @@ sum = { arr ->
   <- (reduce arr {accum item _ -> <- (add accum item)} 0)
 }
 
-
+max_positive = { arr ->
+  <- (reduce arr {accum item _ -> <- (if (greater_than accum item) { <- accum } { <- item }) } 0)
+}
 
 to_uppercase = { key -> 
   lowercase = "abcdefghijklmnopqrstuvwxyz"
@@ -715,7 +717,18 @@ create_bar_element = { x y what num ->
     look = (get props 2)
     index = (subtract (integer (get (get props 2) 0)) 1)
 
-    look = (join (string (add index 1)) " " (inverse "     ") (inverse (string (get (get state RESULTS) index))))
+    max = (max_positive (delete (get state RESULTS) 6))
+    value = (get (get state RESULTS) index)
+    length = (if (greater_than max 0) {
+        <- (integer (multiply (divide value max) 12))
+      } {
+        <- 0
+      })
+
+
+    bar = (inverse (reduce (map (range length) {item _ -> <- " "}) {accum item _ -> <- (join accum item)} ""))
+
+    look = (join (string (add index 1)) " " bar (inverse (string value)))
     (draw (dynamic_props element look))
 
     <- state
