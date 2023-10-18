@@ -114,7 +114,7 @@ mutaute_state_on_input = { state keypress_name ->
       word = (reduce line_in_play { accum item index -> <- (join accum item) } "")
       <- (if (is (find valid_words word) void) {
         // not valid
-        // TODO: animate
+        (invalid_word_animator) // animate
         <- state
       } {
         used = (reduce line_in_play { accum item index ->
@@ -122,11 +122,25 @@ mutaute_state_on_input = { state keypress_name ->
         } (get state USED))
 
         state =  (if (is word (get state ANSWER)) { // win
-          results = (get state RESULTS)
-          state = (set state (set results (add (get results index_in_play) 1 ) index_in_play ) RESULTS)
-          
+          // update win stats
+          // results
+          state = (set state (set (get state RESULTS) (add (get (get state RESULTS) index_in_play) 1) index_in_play ) RESULTS)
+          // streak
+          state = (set state (set (get state STREAK) (add (get (get state STREAK) 0) 1) 0) STREAK)
+          state = (if (greater_than (get (get state STREAK) 0) (get (get state STREAK) 1)) {
+            <- (set state (set (get state STREAK) (get (get state STREAK) 0) 1) STREAK)
+          }{
+            <- state
+          }) 
+
           <- (set state 1 GAME)
         } (is (get state INPLAY) 5) { // last attempt - lost
+          // update win stats
+          // results
+          state = (set state (set (get state RESULTS) (add (get (get state RESULTS) 6) 1) 6 ) RESULTS)
+          // streak
+          state = (set state (set (get state STREAK) 0 0) STREAK)
+
           <- (set state 2 GAME)
         } {
           <- state
@@ -266,6 +280,54 @@ button_exit = ({
     <- (if (is (mouse_over props mouse_xy) 1) {
       <- void
     } {
+      <- state
+    })
+  }
+
+  <- (list props (list on_state void void void on_click))
+})
+
+button_next = ({
+  props = (list
+    76
+    24
+    // the look of  clickable elements must be in form of a 2d list
+    (list
+     (underline (list "N" "e" "x" "t"))
+    )
+  )
+
+  on_state = {
+    (if (not (is (get state GAME) 0)) {
+      (draw (dynamic_props button_next void))
+    } {
+      (draw (dynamic_props button_next "    "))
+    })
+    <- state
+  }
+
+  on_click = {
+    <- (if (not (is (get state GAME) 0)) {
+      props = (dynamic_props button_next void)
+
+      <- (if (is (mouse_over props mouse_xy) 1) {
+        state = (set state 0 GAME)
+        state = (set state (get valid_words i (add i 5)) ANSWER) // word in play)
+        state = (set state     (list
+        (list " " " " " " " " " ")
+        (list " " " " " " " " " ")
+        (list " " " " " " " " " ")
+        (list " " " " " " " " " ")
+        (list " " " " " " " " " ")
+        (list " " " " " " " " " ")
+      ) STATUS)
+        state = (set state 0 INPLAY)
+        state = (set state (list) USED)
+        <- state
+      } {
+        <- state
+      })
+    }{
       <- state
     })
   }
@@ -430,6 +492,61 @@ delete_key = ({
   <- (list props (list on_state void void void on_click))
 })
 
+invalid_word_animator = {
+  props = (dynamic_props board void)
+  index_in_play = (get state INPLAY)
+  line_in_play = (get (get state STATUS) index_in_play)
+
+  props = (list
+    (get props X)
+    (add (get props Y) (multiply index_in_play 3))
+    (list
+      (list "┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐")
+      (list 
+        "│"" " (get line_in_play 0) " ""│"
+        "│"" " (get line_in_play 1) " ""│"
+        "│"" " (get line_in_play 2) " ""│"
+        "│"" " (get line_in_play 3) " ""│"
+        "│"" " (get line_in_play 4) " ""│"
+      )
+      (list "└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘")
+    )
+  )
+
+  props = (set props (add (get props X) 1) X)
+  (draw props)
+  (wait 0.05)
+
+  props = (set props (subtract (get props X) 2) X)
+  (draw props)
+  (wait 0.05)
+
+  props = (set props (add (get props X) 2) X)
+  (draw props)
+  (wait 0.05)
+
+  props = (set props (subtract (get props X) 2) X)
+  (draw props)
+  (wait 0.05)
+
+  eraser = (list
+    (get props X)
+    (get props Y)
+    (list
+      (list "                           ")
+      (list "                           ")
+      (list "                           ")
+    )
+  )
+
+  (draw eraser)
+
+  // get the state function for the board
+  fn = (get (get board 1) 0) 
+  // and run it
+  (fn)
+}
+
 board = ({
   props = (list
     9
@@ -540,8 +657,8 @@ answer = ({
 
 results = ({
   props = (list
-    55
-    5
+    57
+    6
     (list
       "Played: 0" 
       "Win %: 0"
@@ -572,8 +689,8 @@ results = ({
       look = (list
         (join "Played: " (string p)) 
         (join "Win %: " (string win%))
-        "Current Streak: 0"
-        "Max Streak: 0"
+        (join "Streak: " (string (get (get state STREAK) 0)))
+        (join "Max Streak: " (string (get (get state STREAK) 1)))
       )
 
       (draw (dynamic_props results look))
@@ -637,6 +754,7 @@ el = (list
   board
   answer
   results
+  button_next
 )
 
 elements = (join kb graphs el)

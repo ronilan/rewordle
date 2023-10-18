@@ -1,19 +1,42 @@
+// utility
+// split a string on a single char separator
+split = {in sep ->
+  // convert to list of chars
+  arr = (map (range (length in)) {index _ -> <- (get in index)})
+  // reduce list of chars to list of words
+  <- (if (is sep "") {<- arr} {
+    <- (reduce arr {acc char _ ->
+      last_index = (subtract (length acc) 1)
+
+      <- (if (is char sep) {
+        // add new item to result if we come across a separator
+        <- (insert acc "")
+      } {
+        // else, add char to the last item
+        <- (set acc (insert (get acc last_index) char) last_index)
+      })
+    } (list ""))
+  })
+}
+
 valid_words = (read_file "./data/valid.txt")
 
+from_file = (split (read_file "./data/.rewordle") "\n")
+
+// initial state
+APP_XY = 0
+GAME = 1
+ANSWER = 2
+STATUS = 3
+INPLAY = 4
+USED = 5
+RESULTS = 6
+STREAK = 7
+
+X = 0
+Y = 1
+
 state = (use "./usables/tui.crumb" "./usables/colors.crumb" "./src/elements.crumb" {
-  // initial state
-  APP_XY = 0
-  GAME = 1
-  ANSWER = 2
-  STATUS = 3
-  INPLAY = 4
-  USED = 5
-  RESULTS = 6
-  STREAK = 7
-
-  X = 0
-  Y = 1
-
   x = (integer (divide (subtract (columns) app_width) 2)) // center position on x
   y = (integer (divide (subtract (rows) app_height) 2)) // center position on y
 
@@ -35,9 +58,15 @@ state = (use "./usables/tui.crumb" "./usables/colors.crumb" "./src/elements.crum
     )
     0
     (list)
-    (list 0 0 0 0 0 0 0)
-    (list 0 0)
+    (map (split (get from_file 0) ":") { item _ -> <- (integer item)})
+    (map (split (get from_file 1) ":") { item _ -> <- (integer item)})
   )
 
   <- (start state elements)
 })
+
+results_string = (delete (reduce (get state RESULTS) { accum item _ -> <- (join accum ":" (string item)) } "") 0)
+streak_string = (delete (reduce (get state STREAK) { accum item _ -> <- (join accum ":" (string item)) } "") 0)
+
+(write_file "data/.rewordle" (join results_string "\n" streak_string ))
+
