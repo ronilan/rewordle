@@ -19,14 +19,14 @@ split = {in sep ->
   })
 }
 
+play_words = (read_file "./data/play.txt")
 valid_words = (read_file "./data/valid.txt")
 
-f = (read_file "./data/.rewordle")
-
-from_file =  (if (is f void) {
-  <- (list "0:0:0:0:0:0:0" "0:0")
+status = (read_file "./data/.rewordle")
+from_file =  (if (is status void) {
+  <- (list "0:0:0:0:0:0:0" "0:0" "0")
 } {
-  <- (split f "\n")
+  <- (split status "\n")
 })
 
 
@@ -39,25 +39,27 @@ INPLAY = 4
 USED = 5
 RESULTS = 6
 STREAK = 7
+WORD_INDEX = 8
 
 X = 0
 Y = 1
 
 state = (use "./usables/tui.crumb" "./usables/colors.crumb" "./src/elements.crumb" {
-  r = (map (split (get from_file 0) ":") { item _ -> <- (integer item)})
-  s = (map (split (get from_file 1) ":") { item _ -> <- (integer item)})
+  stats_results = (map (split (get from_file 0) ":") { item _ -> <- (integer item)})
+  stats_streak = (map (split (get from_file 1) ":") { item _ -> <- (integer item)})
+  word_index = (integer (get from_file 2))
 
   x = (integer (divide (subtract (columns) app_width) 2)) // center position on x
   y = (integer (divide (subtract (rows) app_height) 2)) // center position on y
 
   // choose a random word
-  l = (integer (divide (add (length valid_words) 1) 6))
+  l = (integer (divide (add (length play_words) 1) 6))
   i = (multiply (integer (multiply (random) l)) 6)
 
   state = (list
     (list x y) // screen anchor
     0 // the game status: 0 = in play, 1 = won, 2 = lost
-    (get valid_words i (add i 5)) // word in play
+    (get play_words (multiply word_index 6) (add (multiply word_index 6) 5)) // word in play
     (list
       (list " " " " " " " " " ")
       (list " " " " " " " " " ")
@@ -68,8 +70,9 @@ state = (use "./usables/tui.crumb" "./usables/colors.crumb" "./src/elements.crum
     )
     0
     (list)
-    r
-    s
+    stats_results
+    stats_streak
+    word_index
   )
 
   <- (start state elements)
@@ -78,5 +81,5 @@ state = (use "./usables/tui.crumb" "./usables/colors.crumb" "./src/elements.crum
 results_string = (delete (reduce (get state RESULTS) { accum item _ -> <- (join accum ":" (string item)) } "") 0)
 streak_string = (delete (reduce (get state STREAK) { accum item _ -> <- (join accum ":" (string item)) } "") 0)
 
-(write_file "data/.rewordle" (join results_string "\n" streak_string ))
+(write_file "data/.rewordle" (join results_string "\n" streak_string "\n" (string (get state WORD_INDEX)) ))
 
