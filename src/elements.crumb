@@ -229,7 +229,7 @@ screen = ({
     <- (if (is curr (get state APP_XY)){
       <- state
     } {
-      (go_to 0 2)
+      (go_to 0 1)
       (clear_below)
 
       <- (set state (list x y) APP_XY)
@@ -292,8 +292,8 @@ button_exit = ({
 button_next = ({
   props = (list
     76
-    24
-    // the look of  clickable elements must be in form of a 2d list
+    23
+    // the look of clickable elements must be in form of a 2d list
     (list
      (underline (list "N" "e" "x" "t"))
     )
@@ -336,163 +336,6 @@ button_next = ({
     }{
       <- state
     })
-  }
-
-  <- (list props (list on_state void void void on_click))
-})
-
-create_element_key = { x y letter ->
-  props = (list
-    (add x 40)
-    (add y 12)
-    (list 
-      (list "┌""─""┐")
-      (list "│" letter "│")
-      (list "└""─""┘")
-    )
-  )
-
-  on_state = {
-    element = (get elements listener_index)
-    props = (get element 0)
-    look = (get props 2)
-    letter = (get (get look 1) 1)
-
-    // only redrew when change is relevant
-    curr = (list (get state USED) (get state APP_XY))
-    prev = (if (is prev_state void) {
-      <- void
-    } {
-      <- (list (get prev_state USED) (get prev_state APP_XY))
-    })
-
-    (if (not (is curr prev)) {
-      look = (if (is (find (get state USED) letter) void) {
-        <- look
-      } {
-        final_letter_status = (reduce (get state STATUS) {accum word_line index ->
-          // only change key look after word is submitted
-          <- (if (less_than index (get state INPLAY)) {
-            guessed_pos = (find word_line letter)
-            letter_status = (get_letter_status letter guessed_pos (get state ANSWER))
-
-            <- (if (greater_than letter_status accum){
-              <- letter_status
-            }{
-              <- accum
-            })
-          }{
-            <- accum
-          })
-        } 0)
-
-        <- (set_background final_letter_status look)
-      })
-
-      (draw (dynamic_props element look))
-    })
-
-    <- state
-  }
-
-  on_click = {
-    element = (get elements listener_index)
-    props = (dynamic_props element void)
-
-    <- (if (is (mouse_over props mouse_xy) 1) {
-      look = (get props 2)
-      letter = (get (get look 1) 1)
-
-      <- (mutaute_state_on_input state letter)
-    } {
-      <- state
-    })
-
-    <- state
-  }
-
-  <- (list props (list on_state void void void on_click))
-}
-
-enter_key = ({
-  props = (list
-    40
-    18
-    (list 
-      (list "┌""─""─""─""┐")
-      (list "│"" ""↩"" ""│")
-      (list "└""─""─""─""┘")
-    )
-  )
-
-  on_state = {
-    // only redrew when change is relevant
-    curr = (list (get state USED) (get state APP_XY))
-    prev = (if (is prev_state void) {
-      <- void
-    } {
-      <- (list (get prev_state USED) (get prev_state APP_XY))
-    })
-
-    (if (not (is curr prev)) {
-      (draw (dynamic_props enter_key void))
-    })
-
-    <- state
-  }
-
-  on_click = {
-    props = (dynamic_props enter_key void)
-
-    <- (if (is (mouse_over props mouse_xy) 1) {
-      <- (mutaute_state_on_input state "\n")
-    } {
-      <- state
-    })
-
-    <- state
-  }
-
-  <- (list props (list on_state void void void on_click))
-})
-
-delete_key = ({
-  props = (list
-    66
-    18
-    (list 
-      (list "┌""─""─""┐")
-      (list "│"" ""⌫""│")
-      (list "└""─""─""┘")
-    )
-  )
-
-  on_state = {
-    // only redrew when change is relevant
-    curr = (list (get state USED) (get state APP_XY))
-    prev = (if (is prev_state void) {
-      <- void
-    } {
-      <- (list (get prev_state USED) (get prev_state APP_XY))
-    })
-
-    (if (not (is curr prev)) {
-      (draw (dynamic_props delete_key void))
-    })
-
-    <- state
-  }
-
-  on_click = {
-    props = (dynamic_props delete_key void)
-
-    <- (if (is (mouse_over props mouse_xy) 1) {
-      <- (mutaute_state_on_input state "delete")
-    } {
-      <- state
-    })
-
-    <- state
   }
 
   <- (list props (list on_state void void void on_click))
@@ -723,16 +566,15 @@ create_bar_element = { x y what num ->
 
     max = (max_positive (delete (get state RESULTS) 6))
     value = (get (get state RESULTS) index)
-    length = (if (greater_than max 0) {
-        <- (integer (multiply (divide value max) 12))
+    len = (if (greater_than max 0) {
+        <- (integer (multiply (divide value max) 11))
       } {
         <- 0
       })
 
-
-    bar = (inverse (reduce (map (range length) {item _ -> <- " "}) {accum item _ -> <- (join accum item)} ""))
-
-    look = (join (string (add index 1)) " " bar (inverse (string value)))
+    bar = (reduce (map (range len) {item _ -> <- " "}) {accum item _ -> <- (join accum item)} "")
+    // note: length is 24 cause string includes escape codes for inverse
+    look = (string_pad_end  (join (string (add index 1)) " " (inverse bar) (inverse (string value))) 24 " ")
     (draw (dynamic_props element look))
 
     <- state
@@ -740,6 +582,163 @@ create_bar_element = { x y what num ->
 
   <- (list props (list on_state void void void void))
 }
+
+create_element_key = { x y letter ->
+  props = (list
+    (add x 40)
+    (add y 12)
+    (list 
+      (list "┌""─""┐")
+      (list "│" letter "│")
+      (list "└""─""┘")
+    )
+  )
+
+  on_state = {
+    element = (get elements listener_index)
+    props = (get element 0)
+    look = (get props 2)
+    letter = (get (get look 1) 1)
+
+    // only redrew when change is relevant
+    curr = (list (get state USED) (get state APP_XY))
+    prev = (if (is prev_state void) {
+      <- void
+    } {
+      <- (list (get prev_state USED) (get prev_state APP_XY))
+    })
+
+    (if (not (is curr prev)) {
+      look = (if (is (find (get state USED) letter) void) {
+        <- look
+      } {
+        final_letter_status = (reduce (get state STATUS) {accum word_line index ->
+          // only change key look after word is submitted
+          <- (if (less_than index (get state INPLAY)) {
+            guessed_pos = (find word_line letter)
+            letter_status = (get_letter_status letter guessed_pos (get state ANSWER))
+
+            <- (if (greater_than letter_status accum){
+              <- letter_status
+            }{
+              <- accum
+            })
+          }{
+            <- accum
+          })
+        } 0)
+
+        <- (set_background final_letter_status look)
+      })
+
+      (draw (dynamic_props element look))
+    })
+
+    <- state
+  }
+
+  on_click = {
+    element = (get elements listener_index)
+    props = (dynamic_props element void)
+
+    <- (if (is (mouse_over props mouse_xy) 1) {
+      look = (get props 2)
+      letter = (get (get look 1) 1)
+
+      <- (mutaute_state_on_input state letter)
+    } {
+      <- state
+    })
+
+    <- state
+  }
+
+  <- (list props (list on_state void void void on_click))
+}
+
+enter_key = ({
+  props = (list
+    40
+    18
+    (list 
+      (list "┌""─""─""─""┐")
+      (list "│"" ""↩"" ""│")
+      (list "└""─""─""─""┘")
+    )
+  )
+
+  on_state = {
+    // only redrew when change is relevant
+    curr = (list (get state USED) (get state APP_XY))
+    prev = (if (is prev_state void) {
+      <- void
+    } {
+      <- (list (get prev_state USED) (get prev_state APP_XY))
+    })
+
+    (if (not (is curr prev)) {
+      (draw (dynamic_props enter_key void))
+    })
+
+    <- state
+  }
+
+  on_click = {
+    props = (dynamic_props enter_key void)
+
+    <- (if (is (mouse_over props mouse_xy) 1) {
+      <- (mutaute_state_on_input state "\n")
+    } {
+      <- state
+    })
+
+    <- state
+  }
+
+  <- (list props (list on_state void void void on_click))
+})
+
+delete_key = ({
+  props = (list
+    66
+    18
+    (list 
+      (list "┌""─""─""┐")
+      (list "│"" ""⌫""│")
+      (list "└""─""─""┘")
+    )
+  )
+
+  on_state = {
+    // only redrew when change is relevant
+    curr = (list (get state USED) (get state APP_XY))
+    prev = (if (is prev_state void) {
+      <- void
+    } {
+      <- (list (get prev_state USED) (get prev_state APP_XY))
+    })
+
+    (if (not (is curr prev)) {
+      (draw (dynamic_props delete_key void))
+    })
+
+    <- state
+  }
+
+  on_click = {
+    props = (dynamic_props delete_key void)
+
+    <- (if (is (mouse_over props mouse_xy) 1) {
+      <- (mutaute_state_on_input state "delete")
+    } {
+      <- state
+    })
+
+    <- state
+  }
+
+  <- (list props (list on_state void void void on_click))
+})
 
 keys = (list
   (list "Q" "W" "E" "R" "T" "Y" "U" "I" "O" "P")

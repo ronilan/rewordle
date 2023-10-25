@@ -27,3 +27,6 @@ node_modules/
 
 # do not include Crumb interpreter
 crumb
+
+# do not include user data
+data/.rewordle
