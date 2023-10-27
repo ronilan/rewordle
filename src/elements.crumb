@@ -522,7 +522,7 @@ board = ({
 answer = ({
   // 1: Genius 2: Magnificent 3: Impressive 4: Splendid 5: Great 6: Phew
   props = (list
-    50
+    40
     3
     (join "Wordle #" "1" "?????")
   )
@@ -616,14 +616,15 @@ create_bar_element = { x y what num ->
     max = (max_positive (delete (get state RESULTS) 6))
     value = (get (get state RESULTS) index)
     len = (if (greater_than max 0) {
-        <- (integer (multiply (divide value max) 11))
+        <- (integer (multiply (divide value max) 10))
       } {
         <- 0
       })
 
     bar = (reduce (map (range len) {item _ -> <- " "}) {accum item _ -> <- (join accum item)} "")
+    end = (reduce (map (range (subtract 11 len)) {item _ -> <- " "}) {accum item _ -> <- (join accum item)} "")
     // note: length is 24 cause string includes escape codes for inverse
-    look = (string_pad_end  (join (string (add index 1)) " " (inverse bar) (inverse (string value))) 24 " ")
+    look = (join (string (add index 1)) " " (inverse bar) (inverse (string value)) end)
     (draw (dynamic_props element look))
 
     <- state
@@ -708,7 +709,7 @@ create_element_key = { x y letter ->
     <- state
   }
 
-  <- (list props (list void void void void on_click))
+  <- (list props (list on_state void void void on_click))
 }
 
 enter_key = ({
