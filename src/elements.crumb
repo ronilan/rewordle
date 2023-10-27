@@ -28,6 +28,10 @@ dynamic_props = { element look ->
   })
 }
 
+str_to_arr = { str ->
+  <- (map (range 5) {index _ -> <- (get str index)})
+}
+
 sum = { arr ->
   <- (reduce arr {accum item _ -> <- (add accum item)} 0)
 }
@@ -61,6 +65,46 @@ to_lowercase = { key ->
 }
 
 // game rules
+wordle_highlight = { guess_arr answer_arr ->
+  exact = 2
+  exists = 1
+  does_not_exist = 0
+
+  // first step - "punch" correct matches out of possible"
+  answer_map = (map answer_arr {item index -> 
+    <- (if (is item (get guess_arr index)) {
+      <- "-"
+    }{
+      <- item
+    })
+  })
+
+  // second step "reduce" array into a list that remembers the punching
+  <- (get
+    (reduce guess_arr { accum guess_item guess_index ->
+      curr__answer_map = (get accum 1)
+      curr_result = (get accum 0)
+
+      <- (if (is guess_item (get answer_arr guess_index)) {
+        <- (list (insert curr_result exact) curr__answer_map)
+      } (is (find answer_arr guess_item) void) {
+        <- (list (insert curr_result does_not_exist) curr__answer_map)
+      } {
+        answer_index = (find (get accum 1) guess_item)
+        <- (if (is answer_index void) {
+        <- (list (insert curr_result does_not_exist) curr__answer_map)
+        }{
+          <- (list (insert curr_result exists) (set curr__answer_map "-" answer_index ))
+        })
+      }) 
+    } (list (list) answer_map))
+  0)
+}
+
+get_letter_status = { letter pos guess_arr answer_arr ->
+  <- (get (wordle_highlight guess_arr answer_arr) pos)
+}
+
 set_background = { letter_status item ->
   <- (if (is letter_status 2) {
     // green
@@ -70,24 +114,6 @@ set_background = { letter_status item ->
     <- (background 3 item)
   } {
     <- (background 8 item)
-  })
-}
-
-get_letter_status = { letter pos answer ->
-  // TODO: fix ambering of repeated letters
-  // letter status is in relation to whole word not letter by letter
-  <- (if (is pos void) {
-    <- 0
-  } {
-    <- (if (is (get answer pos) letter) {
-      // green
-      <- 2
-    } (not (is (find answer letter) void)) {
-      // yellow
-      <- 1
-    } {
-      <- 0
-    })
   })
 }
 
@@ -124,6 +150,8 @@ mutaute_state_on_input = { state keypress_name ->
         } (get state USED))
 
         state =  (if (is word (get state ANSWER)) { // win
+          // set next word
+          state = (set state (add (get state WORD_INDEX) 1) WORD_INDEX)
           // update win stats
           // results
           state = (set state (set (get state RESULTS) (add (get (get state RESULTS) index_in_play) 1) index_in_play ) RESULTS)
@@ -166,10 +194,29 @@ mutaute_state_on_input = { state keypress_name ->
       <- state
     })
   } {
-    <- state
+    <- (if (is keypress_name "\n") {
+      <- (mutaute_state_new_game)
+    } {
+      <- state
+    })
   })
 }
 
+mutaute_state_new_game = {
+  state = (set state 0 GAME)
+  state = (set state (get play_words (multiply (get state WORD_INDEX) 6)  (add (multiply (get state WORD_INDEX) 6) 5)) ANSWER) // word in play)
+  state = (set state     (list
+    (list " " " " " " " " " ")
+    (list " " " " " " " " " ")
+    (list " " " " " " " " " ")
+    (list " " " " " " " " " ")
+    (list " " " " " " " " " ")
+    (list " " " " " " " " " ")
+  ) STATUS)
+  state = (set state 0 INPLAY)
+  state = (set state (list) USED)
+  <- state
+}
 //***  settings
 app_width = 80
 app_height = 24
@@ -313,22 +360,19 @@ button_next = ({
       props = (dynamic_props button_next void)
 
       <- (if (is (mouse_over props mouse_xy) 1) {
-        // choose next word
-        next_index = (add (get state WORD_INDEX) 1)
-
-        state = (set state 0 GAME)
-        state = (set state (get play_words (multiply next_index 6)  (add (multiply next_index 6) 5)) ANSWER) // word in play)
-        state = (set state     (list
-        (list " " " " " " " " " ")
-        (list " " " " " " " " " ")
-        (list " " " " " " " " " ")
-        (list " " " " " " " " " ")
-        (list " " " " " " " " " ")
-        (list " " " " " " " " " ")
-      ) STATUS)
-        state = (set state 0 INPLAY)
-        state = (set state (list) USED)
-        state = (set state next_index WORD_INDEX)
+        <- (mutaute_state_new_game)
+        // state = (set state 0 GAME)
+        // state = (set state (get play_words (multiply (get state WORD_INDEX) 6)  (add (multiply (get state WORD_INDEX) 6) 5)) ANSWER) // word in play)
+        // state = (set state     (list
+        //   (list " " " " " " " " " ")
+        //   (list " " " " " " " " " ")
+        //   (list " " " " " " " " " ")
+        //   (list " " " " " " " " " ")
+        //   (list " " " " " " " " " ")
+        //   (list " " " " " " " " " ")
+        // ) STATUS)
+        // state = (set state 0 INPLAY)
+        // state = (set state (list) USED)
         <- state
       } {
         <- state
@@ -434,6 +478,8 @@ board = ({
         r =  (integer (divide row_index 3))
         c =  (integer (divide index 5))
         letter = (get (get (get state STATUS) r) c)
+        guess_arr = (get (get state STATUS) r)
+        answer_arr = (str_to_arr (get state ANSWER))
 
         <- (if (and (is (remainder row_index 3) 1) (is (remainder index 5) 2) ) {
           <- (if (is (get state INPLAY) r) {
@@ -446,7 +492,7 @@ board = ({
             <- (if (is letter " ") {
               <- letter
             } {
-              letter_status = (get_letter_status letter c (get state ANSWER))
+              letter_status = (get_letter_status letter c guess_arr answer_arr)
               <- (set_background letter_status letter)
             })
           })
@@ -457,7 +503,7 @@ board = ({
             <- (if (is letter " ") {
               <- item
             } {
-              letter_status = (get_letter_status letter c (get state ANSWER))
+              letter_status = (get_letter_status letter c guess_arr answer_arr)
               <- (set_background letter_status item)
             })
           })
@@ -476,9 +522,9 @@ board = ({
 answer = ({
   // 1: Genius 2: Magnificent 3: Impressive 4: Splendid 5: Great 6: Phew
   props = (list
-    53
+    50
     3
-    "?????"
+    (join "Wordle #" "1" "?????")
   )
 
   on_state = {
@@ -491,10 +537,13 @@ answer = ({
     })
 
     (if (not (is curr prev)) {
+
       (if (not (is (get state GAME) 0)) {
-        (draw (dynamic_props answer (get state ANSWER)))
+        mapped = (join "Wordle #" (string (get state WORD_INDEX)) " " (get state ANSWER))
+        (draw (dynamic_props answer mapped))
       } {
-        (draw (dynamic_props answer void))
+        mapped = (join "Wordle #" (string (add (get state WORD_INDEX) 1)) " " "?????")
+        (draw (dynamic_props answer mapped))
       })
     })
 
@@ -612,16 +661,22 @@ create_element_key = { x y letter ->
       look = (if (is (find (get state USED) letter) void) {
         <- look
       } {
-        final_letter_status = (reduce (get state STATUS) {accum word_line index ->
+        final_letter_status = (reduce (get state STATUS) {accum guess_arr index ->
           // only change key look after word is submitted
           <- (if (less_than index (get state INPLAY)) {
-            guessed_pos = (find word_line letter)
-            letter_status = (get_letter_status letter guessed_pos (get state ANSWER))
+            answer_arr = (str_to_arr (get state ANSWER))
 
-            <- (if (greater_than letter_status accum){
-              <- letter_status
-            }{
+            guessed_pos = (find guess_arr letter)
+            <- (if (is guessed_pos void) {
               <- accum
+            }{
+              letter_status = (get_letter_status letter guessed_pos guess_arr answer_arr)
+
+              <- (if (greater_than letter_status accum){
+                <- letter_status
+              }{
+                <- accum
+              })
             })
           }{
             <- accum
@@ -653,7 +708,7 @@ create_element_key = { x y letter ->
     <- state
   }
 
-  <- (list props (list on_state void void void on_click))
+  <- (list props (list void void void void on_click))
 }
 
 enter_key = ({
@@ -669,11 +724,11 @@ enter_key = ({
 
   on_state = {
     // only redrew when change is relevant
-    curr = (list (get state USED) (get state APP_XY))
+    curr = (list (get state APP_XY))
     prev = (if (is prev_state void) {
       <- void
     } {
-      <- (list (get prev_state USED) (get prev_state APP_XY))
+      <- (list (get prev_state APP_XY))
     })
 
     (if (not (is curr prev)) {
@@ -711,11 +766,11 @@ delete_key = ({
 
   on_state = {
     // only redrew when change is relevant
-    curr = (list (get state USED) (get state APP_XY))
+    curr = (list (get state APP_XY))
     prev = (if (is prev_state void) {
       <- void
     } {
-      <- (list (get prev_state USED) (get prev_state APP_XY))
+      <- (list (get prev_state APP_XY))
     })
 
     (if (not (is curr prev)) {
@@ -754,7 +809,6 @@ kb = (reduce keys { line_accum key_line line_index ->
 
 kb = (insert kb enter_key)
 kb = (insert kb delete_key)
-
 
 stats = (list "1" "2" "3" "4" "5" "6")
 
