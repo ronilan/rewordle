@@ -145,6 +145,8 @@ mutaute_state_on_input = { state keypress_name ->
         (invalid_word_animator) // animate
         <- state
       } {
+        (reveal_animator) // animate
+
         used = (reduce line_in_play { accum item index ->
           <- (if (is (find accum item) void) { <- (insert accum item) } { <- accum })
         } (get state USED))
@@ -361,18 +363,6 @@ button_next = ({
 
       <- (if (is (mouse_over props mouse_xy) 1) {
         <- (mutaute_state_new_game)
-        // state = (set state 0 GAME)
-        // state = (set state (get play_words (multiply (get state WORD_INDEX) 6)  (add (multiply (get state WORD_INDEX) 6) 5)) ANSWER) // word in play)
-        // state = (set state     (list
-        //   (list " " " " " " " " " ")
-        //   (list " " " " " " " " " ")
-        //   (list " " " " " " " " " ")
-        //   (list " " " " " " " " " ")
-        //   (list " " " " " " " " " ")
-        //   (list " " " " " " " " " ")
-        // ) STATUS)
-        // state = (set state 0 INPLAY)
-        // state = (set state (list) USED)
         <- state
       } {
         <- state
@@ -384,6 +374,112 @@ button_next = ({
 
   <- (list props (list on_state void void void on_click))
 })
+
+
+replace = { in with at ->
+  <- (if (and 
+    (is (type in) "string")
+    (is (type with) "string")
+  ) {
+    end = (if (greater_than (add at (length with)) (length in)) { 
+      <- (length in) 
+    } { 
+      <- (add at (length with))
+    })
+    trimmed = (if (greater_than (subtract end at) 0) {
+      <- (get with 0 (subtract end at))
+    } {
+      <- ""
+    })
+    cleaned = (if (less_than at end) {
+      <- (delete in at end)
+    }{
+      <- in
+    })
+    
+    <- (if (less_than at end) {
+      <- (insert cleaned trimmed at)
+    }{
+      <- in
+    })
+  } (and 
+    (is (type in) "list")
+    (is (type with) "list")
+  ) {
+    <- (map in { item index -> 
+      end = (add at (length with) )
+      <- (if (and
+        (greater_than index (subtract at 1))
+        (less_than index end) 
+      ) {
+        <- (get with (subtract index at))
+      } {
+        <- item
+      })
+    })
+  } {
+    <- in
+  })
+}
+
+reveal_animator = {
+  props = (dynamic_props board void)
+  index_in_play = (get state INPLAY)
+  line_in_play = (get (get state STATUS) index_in_play)
+
+  props = (list
+    (get props X)
+    (add (get props Y) (multiply index_in_play 3))
+    (list
+      (list "┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐")
+      (list 
+        "│"" " (get line_in_play 0) " ""│"
+        "│"" " (get line_in_play 1) " ""│"
+        "│"" " (get line_in_play 2) " ""│"
+        "│"" " (get line_in_play 3) " ""│"
+        "│"" " (get line_in_play 4) " ""│"
+      )
+      (list "└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘")
+    )
+  )
+
+  guess_arr = (get (get state STATUS) index_in_play)
+  answer_arr = (str_to_arr (get state ANSWER))
+
+  (reduce (range 5) { look item index -> 
+    letter_status = (get_letter_status (get line_in_play index) index guess_arr answer_arr)
+
+    top = (replace (get look 0) (list " "" "" "" "" ") (multiply index 5))
+    middle = (replace (get look 1) (list "─""─""─""─""─") (multiply index 5))
+    bottom = (replace (get look 2) (list " "" "" "" "" ") (multiply index 5))
+
+    look = (list
+      top
+      middle
+      bottom
+    )
+
+    props = (set props look 2)
+    (draw props)
+    (wait 0.5)
+
+    top = (replace (get look 0) (set_background letter_status (list "┌""─""─""─""┐")) (multiply index 5))
+    middle = (replace (get look 1) (set_background letter_status (list "│"" " (get line_in_play index) " ""│")) (multiply index 5))
+    bottom = (replace (get look 2) (set_background letter_status (list "└""─""─""─""┘")) (multiply index 5))
+
+    look = (list
+      top
+      middle
+      bottom
+    )
+
+    props = (set props look 2)
+    (draw props)
+    (wait 0.5)
+
+    <- look
+  } (get props 2))
+}
 
 invalid_word_animator = {
   props = (dynamic_props board void)
@@ -431,13 +527,11 @@ invalid_word_animator = {
       (list "                           ")
     )
   )
-
   (draw eraser)
 
-  // get the state function for the board
-  fn = (get (get board 1) 0) 
-  // and run it
-  (fn)
+  props = (set props (add (get props X) 1) X)
+  (draw props)
+  (wait 0.05)
 }
 
 board = ({
