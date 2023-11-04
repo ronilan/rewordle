@@ -1,6 +1,6 @@
 # Rewordle
 
-Rewordle let's you play all the worlde words from the beginning. in the terminal.
+Rewordle let's you play all the Worlde words from the beginning in the terminal.
 
 It's written in [Crumb](https://github.com/liam-ilan/crumb).
 
