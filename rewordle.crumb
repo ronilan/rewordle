@@ -58,7 +58,7 @@ state = (use "./usables/tui.crumb" "./usables/colors.crumb" "./src/elements.crum
 
   state = (list
     (list x y) // screen anchor
-    0 // the game status: 0 = in play, 1 = lose, 2 = win
+    0 // the game status: 0 = in play, 1 = win, 2 = lose
     word_index
     (get play_words (multiply word_index 6) (add (multiply word_index 6) 5)) // word in play
     (list

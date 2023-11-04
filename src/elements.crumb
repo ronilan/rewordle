@@ -622,16 +622,15 @@ answer = ({
 
   on_state = {
     // only redrew when change is relevant
-    curr = (list (get state USED) (get state APP_XY))
+    curr = (list (get state GAME) (get state APP_XY))
     prev = (if (is prev_state void) {
       <- void
     } {
-      <- (list (get prev_state USED) (get prev_state APP_XY))
+      <- (list (get prev_state GAME) (get prev_state APP_XY))
     })
 
     (if (not (is curr prev)) {
-
-      (if (not (is (get state GAME) 0)) {
+      (if (is (get state GAME) 1) {
         // 1: Genius 2: Magnificent 3: Impressive 4: Splendid 5: Great 6: Phew
         index_in_play = (get state INPLAY)
         word_index = (get state WORD_INDEX)
@@ -661,6 +660,9 @@ answer = ({
           (wait 1)
         })
         mapped = (join "Wordle #" (string (get state WORD_INDEX)) " " (get state ANSWER) "      ")
+        (draw (dynamic_props answer mapped))
+      } (is (get state GAME) 2) {
+        mapped = (join "Wordle #" (string (get state WORD_INDEX)) " " (inverse (get state ANSWER)) "      ")
         (draw (dynamic_props answer mapped))
       } {
         mapped = (join "Wordle #" (string (add (get state WORD_INDEX) 1)) " " "?????")
