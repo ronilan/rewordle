@@ -340,8 +340,8 @@ button_exit = ({
 
 button_next = ({
   props = (list
-    76
-    23
+    75
+    22
     // the look of clickable elements must be in form of a 2d list
     (list
      (underline (list "N" "e" "x" "t"))
@@ -461,7 +461,7 @@ reveal_animator = {
 
     props = (set props look 2)
     (draw props)
-    (wait 0.5)
+    (wait 0.3)
 
     top = (replace (get look 0) (set_background letter_status (list "┌""─""─""─""┐")) (multiply index 5))
     middle = (replace (get look 1) (set_background letter_status (list "│"" " (get line_in_play index) " ""│")) (multiply index 5))
@@ -475,7 +475,7 @@ reveal_animator = {
 
     props = (set props look 2)
     (draw props)
-    (wait 0.5)
+    (wait 0.3)
 
     <- look
   } (get props 2))
@@ -537,7 +537,7 @@ invalid_word_animator = {
 board = ({
   props = (list
     9
-    3
+    4
     (list 
       (list "┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐")
       (list "│"" "" "" ""│""│"" "" "" ""│""│"" "" "" ""│""│"" "" "" ""│""│"" "" "" ""│")
@@ -614,10 +614,9 @@ board = ({
 })
 
 answer = ({
-  // 1: Genius 2: Magnificent 3: Impressive 4: Splendid 5: Great 6: Phew
   props = (list
-    40
-    3
+    30
+    2
     (join "Wordle #" "1" "?????")
   )
 
@@ -633,7 +632,35 @@ answer = ({
     (if (not (is curr prev)) {
 
       (if (not (is (get state GAME) 0)) {
-        mapped = (join "Wordle #" (string (get state WORD_INDEX)) " " (get state ANSWER))
+        // 1: Genius 2: Magnificent 3: Impressive 4: Splendid 5: Great 6: Phew
+        index_in_play = (get state INPLAY)
+        word_index = (get state WORD_INDEX)
+        (if (is index_in_play 1) {
+          mapped = (join "Wordle #" (string word_index) " " (inverse "Genius") "     ")
+          (draw (dynamic_props answer mapped))
+          (wait 1)
+        } (is index_in_play  2) {
+          mapped = (join "Wordle #" (string word_index) " " (inverse "Magnificent"))
+          (draw (dynamic_props answer mapped))
+          (wait 1)
+        } (is index_in_play  3) {
+          mapped = (join "Wordle #" (string word_index) " " (inverse "Impressive") " ")
+          (draw (dynamic_props answer mapped))
+          (wait 1)
+        } (is index_in_play  4) {
+          mapped = (join "Wordle #" (string word_index) " " (inverse "Splendid") "   ")
+          (draw (dynamic_props answer mapped))
+          (wait 1)
+        } (is index_in_play  5) {
+          mapped = (join "Wordle #" (string word_index) " " (inverse "Great") "      ")
+          (draw (dynamic_props answer mapped))
+          (wait 1)
+        } (is index_in_play  6) {
+          mapped = (join "Wordle #" (string word_index) " " (inverse "Phew") "       ")
+          (draw (dynamic_props answer mapped))
+          (wait 1)
+        })
+        mapped = (join "Wordle #" (string (get state WORD_INDEX)) " " (get state ANSWER) "      ")
         (draw (dynamic_props answer mapped))
       } {
         mapped = (join "Wordle #" (string (add (get state WORD_INDEX) 1)) " " "?????")
@@ -650,7 +677,7 @@ answer = ({
 results = ({
   props = (list
     40
-    6
+    4
     (list
       "Played: 0" 
       "Win %: 0"
@@ -697,7 +724,7 @@ results = ({
 create_bar_element = { x y what num ->
   props = (list
     (add x 57)
-    (add y 5)
+    (add y 4)
     (join what " " (inverse "") (inverse (string num)))
   )
 
@@ -730,7 +757,7 @@ create_bar_element = { x y what num ->
 create_element_key = { x y letter ->
   props = (list
     (add x 40)
-    (add y 12)
+    (add y 13)
     (list 
       (list "┌""─""┐")
       (list "│" letter "│")
@@ -809,7 +836,7 @@ create_element_key = { x y letter ->
 enter_key = ({
   props = (list
     40
-    18
+    19
     (list 
       (list "┌""─""─""─""┐")
       (list "│"" ""↩"" ""│")
@@ -851,7 +878,7 @@ enter_key = ({
 delete_key = ({
   props = (list
     66
-    18
+    19
     (list 
       (list "┌""─""─""┐")
       (list "│"" ""⌫""│")

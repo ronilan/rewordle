@@ -33,13 +33,13 @@ from_file =  (if (is status void) {
 // initial state
 APP_XY = 0
 GAME = 1
-ANSWER = 2
-STATUS = 3
-INPLAY = 4
-USED = 5
-RESULTS = 6
-STREAK = 7
-WORD_INDEX = 8
+WORD_INDEX = 2
+ANSWER = 3
+STATUS = 4
+INPLAY = 5
+USED = 6
+RESULTS = 7
+STREAK = 8
 
 X = 0
 Y = 1
@@ -58,7 +58,8 @@ state = (use "./usables/tui.crumb" "./usables/colors.crumb" "./src/elements.crum
 
   state = (list
     (list x y) // screen anchor
-    0 // the game status: 0 = in play, 1 = won, 2 = lost
+    0 // the game status: 0 = in play, 1 = lose, 2 = win
+    word_index
     (get play_words (multiply word_index 6) (add (multiply word_index 6) 5)) // word in play
     (list
       (list " " " " " " " " " ")
@@ -72,7 +73,6 @@ state = (use "./usables/tui.crumb" "./usables/colors.crumb" "./src/elements.crum
     (list)
     stats_results
     stats_streak
-    word_index
   )
 
   <- (start state elements)
@@ -81,5 +81,5 @@ state = (use "./usables/tui.crumb" "./usables/colors.crumb" "./src/elements.crum
 results_string = (delete (reduce (get state RESULTS) { accum item _ -> <- (join accum ":" (string item)) } "") 0)
 streak_string = (delete (reduce (get state STREAK) { accum item _ -> <- (join accum ":" (string item)) } "") 0)
 
-(write_file "data/.rewordle" (join results_string "\n" streak_string "\n" (string (get state WORD_INDEX)) ))
+(write_file "data/.rewordle" (join results_string "\n" streak_string "\n" (string (get state WORD_INDEX))))
 
