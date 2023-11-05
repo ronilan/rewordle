@@ -160,7 +160,7 @@ is_valid_key = { keypress_name ->
 }
 
 // encapsulate anything that can happen in the game
-mutaute_state_on_input = { state keypress_name ->
+mutate_state_on_input = { state keypress_name ->
   <- (if (is (get state GAME) 0) { // in play
     index_in_play = (get state INPLAY)
     line_in_play = (get (get state STATUS) index_in_play)
@@ -183,10 +183,6 @@ mutaute_state_on_input = { state keypress_name ->
         <- state
       } {
         (reveal_animator) // animate
-
-        used = (reduce line_in_play { accum item index ->
-          <- (if (is (find accum item) void) { <- (insert accum item) } { <- accum })
-        } (get state USED))
 
         state =  (if (is word (get state ANSWER)) { // win
           // set next word
@@ -215,6 +211,10 @@ mutaute_state_on_input = { state keypress_name ->
           <- state
         })
 
+        used = (reduce line_in_play { accum item index ->
+          <- (if (is (find accum item) void) { <- (insert accum item) } { <- accum })
+        } (get state USED))
+
         state = (set state used USED)
         state = (set state (add index_in_play 1) INPLAY)
         <- state
@@ -234,14 +234,14 @@ mutaute_state_on_input = { state keypress_name ->
     })
   } {
     <- (if (is keypress_name "\n") {
-      <- (mutaute_state_new_game)
+      <- (mutate_state_new_game)
     } {
       <- state
     })
   })
 }
 
-mutaute_state_new_game = {
+mutate_state_new_game = {
   state = (set state 0 GAME)
   state = (set state (get play_words (multiply (get state WORD_INDEX) 6)  (add (multiply (get state WORD_INDEX) 6) 5)) ANSWER) // word in play)
   state = (set state     (list
@@ -502,6 +502,7 @@ button_next = ({
 
   on_state = {
     (if (not (is (get state GAME) 0)) {
+      (save state)
       (draw (dynamic_props button_next void))
     } {
       (draw (dynamic_props button_next "    "))
@@ -514,7 +515,7 @@ button_next = ({
       props = (dynamic_props button_next void)
 
       <- (if (is (mouse_over props mouse_xy) 1) {
-        <- (mutaute_state_new_game)
+        <- (mutate_state_new_game)
         <- state
       } {
         <- state
@@ -554,7 +555,7 @@ board = ({
   )
 
   on_keypress = {
-    <- (mutaute_state_on_input state keypress_name)
+    <- (mutate_state_on_input state keypress_name)
   }
 
   on_state = {
@@ -766,36 +767,32 @@ create_element_key = { x y letter ->
     letter = (get (get look 1) 1)
 
     // only redrew when change is relevant
-    curr = (list (get state USED) (get state APP_XY))
+    curr = (list (get state INPLAY) (get state APP_XY))
     prev = (if (is prev_state void) {
       <- void
     } {
-      <- (list (get prev_state USED) (get prev_state APP_XY))
+      <- (list (get prev_state INPLAY) (get prev_state APP_XY))
     })
 
+    // only change key look after word is submitted
     (if (not (is curr prev)) {
       look = (if (is (find (get state USED) letter) void) {
         <- look
       } {
         final_letter_status = (reduce (get state STATUS) {accum guess_arr index ->
-          // only change key look after word is submitted
-          <- (if (less_than index (get state INPLAY)) {
-            answer_arr = (str_to_arr (get state ANSWER))
+          answer_arr = (str_to_arr (get state ANSWER))
 
-            guessed_pos = (find guess_arr letter)
-            <- (if (is guessed_pos void) {
-              <- accum
-            }{
-              letter_status = (get_letter_status guessed_pos guess_arr answer_arr)
-
-              <- (if (greater_than letter_status accum){
-                <- letter_status
-              }{
-                <- accum
-              })
-            })
-          }{
+          guessed_pos = (find guess_arr letter)
+          <- (if (is guessed_pos void) {
             <- accum
+          }{
+            letter_status = (get_letter_status guessed_pos guess_arr answer_arr)
+
+            <- (if (greater_than letter_status accum){
+              <- letter_status
+            }{
+              <- accum
+            })
           })
         } 0)
 
@@ -816,7 +813,7 @@ create_element_key = { x y letter ->
       look = (get props 2)
       letter = (get (get look 1) 1)
 
-      <- (mutaute_state_on_input state letter)
+      <- (mutate_state_on_input state letter)
     } {
       <- state
     })
@@ -858,7 +855,7 @@ enter_key = ({
     props = (dynamic_props enter_key void)
 
     <- (if (is (mouse_over props mouse_xy) 1) {
-      <- (mutaute_state_on_input state "\n")
+      <- (mutate_state_on_input state "\n")
     } {
       <- state
     })
@@ -900,7 +897,7 @@ delete_key = ({
     props = (dynamic_props delete_key void)
 
     <- (if (is (mouse_over props mouse_xy) 1) {
-      <- (mutaute_state_on_input state "delete")
+      <- (mutate_state_on_input state "delete")
     } {
       <- state
     })

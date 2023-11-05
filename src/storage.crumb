@@ -1,0 +1,42 @@
+//*** general utility functions
+
+// split a string on a single char separator
+split = {in sep ->
+  // convert to list of chars
+  arr = (map (range (length in)) {index _ -> <- (get in index)})
+  // reduce list of chars to list of words
+  <- (if (is sep "") {<- arr} {
+    <- (reduce arr {acc char _ ->
+      last_index = (subtract (length acc) 1)
+
+      <- (if (is char sep) {
+        // add new item to result if we come across a separator
+        <- (insert acc "")
+      } {
+        // else, add char to the last item
+        <- (set acc (insert (get acc last_index) char) last_index)
+      })
+    } (list ""))
+  })
+}
+
+prep_string = { state key -> 
+  <- (delete (reduce (get state key) { accum item _ -> <- (join accum ":" (string item)) } "") 0)
+}
+
+save = { state -> 
+  (write_file "data/.rewordle" (join 
+    (prep_string state RESULTS) "\n" 
+    (prep_string state STREAK) "\n" 
+    (string (get state WORD_INDEX))
+  ))
+}
+
+read = {
+  status = (read_file "./data/.rewordle")
+  <- (if (is status void) {
+    <- (list "0:0:0:0:0:0:0" "0:0" "0")
+  } {
+    <- (split status "\n")
+  })
+}

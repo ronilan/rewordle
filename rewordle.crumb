@@ -1,36 +1,4 @@
-//*** general utility functions
-
-// split a string on a single char separator
-split = {in sep ->
-  // convert to list of chars
-  arr = (map (range (length in)) {index _ -> <- (get in index)})
-  // reduce list of chars to list of words
-  <- (if (is sep "") {<- arr} {
-    <- (reduce arr {acc char _ ->
-      last_index = (subtract (length acc) 1)
-
-      <- (if (is char sep) {
-        // add new item to result if we come across a separator
-        <- (insert acc "")
-      } {
-        // else, add char to the last item
-        <- (set acc (insert (get acc last_index) char) last_index)
-      })
-    } (list ""))
-  })
-}
-
-play_words = (read_file "./data/play.txt")
-valid_words = (read_file "./data/valid.txt")
-
-status = (read_file "./data/.rewordle")
-from_file =  (if (is status void) {
-  <- (list "0:0:0:0:0:0:0" "0:0" "0")
-} {
-  <- (split status "\n")
-})
-
-// initial state
+// state access constants
 APP_XY = 0
 GAME = 1
 WORD_INDEX = 2
@@ -44,24 +12,31 @@ STREAK = 8
 X = 0
 Y = 1
 
-state = (use "./usables/tui.crumb" "./usables/colors.crumb" "./src/elements.crumb" {
-  stats_results = (map (split (get from_file 0) ":") { item _ -> <- (integer item)})
-  stats_streak = (map (split (get from_file 1) ":") { item _ -> <- (integer item)})
-  word_index = (integer (get from_file 2))
+state = (use "./usables/tui.crumb" "./usables/colors.crumb" "./src/elements.crumb" "./src/storage.crumb" {
+  // game rules
+  valid_words = (read_file "./data/valid.txt")
+  play_words = (read_file "./data/play.txt")
 
+  from_storage = (read)
+
+  // app pos
   x = (integer (divide (subtract (columns) app_width) 2)) // center position on x
   y = (integer (divide (subtract (rows) app_height) 2)) // center position on y
 
-  // choose a random word
-  l = (integer (divide (add (length play_words) 1) 6))
-  i = (multiply (integer (multiply (random) l)) 6)
+  // last word played
+  word_index = (integer (get from_storage 2))
 
+  // stats from storage
+  stats_results = (map (split (get from_storage 0) ":") { item _ -> <- (integer item)})
+  stats_streak = (map (split (get from_storage 1) ":") { item _ -> <- (integer item)})
+
+  // set state
   state = (list
     (list x y) // screen anchor
     0 // the game status: 0 = in play, 1 = win, 2 = lose
-    word_index
+    word_index // the index of the played from the list of words
     (get play_words (multiply word_index 6) (add (multiply word_index 6) 5)) // word in play
-    (list
+    (list // board state
       (list " " " " " " " " " ")
       (list " " " " " " " " " ")
       (list " " " " " " " " " ")
@@ -69,7 +44,7 @@ state = (use "./usables/tui.crumb" "./usables/colors.crumb" "./src/elements.crum
       (list " " " " " " " " " ")
       (list " " " " " " " " " ")
     )
-    0
+    0 // index of line in play
     (list)
     stats_results
     stats_streak
@@ -81,5 +56,6 @@ state = (use "./usables/tui.crumb" "./usables/colors.crumb" "./src/elements.crum
 results_string = (delete (reduce (get state RESULTS) { accum item _ -> <- (join accum ":" (string item)) } "") 0)
 streak_string = (delete (reduce (get state STREAK) { accum item _ -> <- (join accum ":" (string item)) } "") 0)
 
-(write_file "data/.rewordle" (join results_string "\n" streak_string "\n" (string (get state WORD_INDEX))))
-
+(use "./src/storage.crumb" {
+  (save state)
+})
