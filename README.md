@@ -36,7 +36,7 @@ Run:
 
 Build: 
 ```
-docker build -t rewordle.crumb git@github.com:ronilan/rewordle.crumb.git#main
+docker build -t rewordle.crumb git@github.com:ronilan/rewordle.git#main
 ```
 Run: 
 ```
@@ -45,7 +45,7 @@ docker run --rm -it rewordle.crumb
 
 Or "all in one": 
 ```
-docker run --rm -it $(docker build -q git@github.com:ronilan/rewordle.crumb.git#main)
+docker run --rm -it $(docker build -q git@github.com:ronilan/rewordle.git#main)
 ```
 
 Then in the shell: 
