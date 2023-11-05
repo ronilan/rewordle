@@ -1,4 +1,5 @@
-// utility
+//*** general utility functions
+
 // split a string on a single char separator
 split = {in sep ->
   // convert to list of chars
@@ -28,7 +29,6 @@ from_file =  (if (is status void) {
 } {
   <- (split status "\n")
 })
-
 
 // initial state
 APP_XY = 0

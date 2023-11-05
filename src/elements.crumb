@@ -28,6 +28,8 @@ dynamic_props = { element look ->
   })
 }
 
+//*** general utility functions
+
 str_to_arr = { str ->
   <- (map (range 5) {index _ -> <- (get str index)})
 }
@@ -52,25 +54,58 @@ to_uppercase = { key ->
   })
 }
 
-to_lowercase = { key -> 
-  lowercase = "abcdefghijklmnopqrstuvwxyz"
-  uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-  index = (find uppercase key)
-  <- (if (is index void){
-    <- key
-  }{
-    <- (get lowercase index) 
+replace = { in with at ->
+  <- (if (and 
+    (is (type in) "string")
+    (is (type with) "string")
+  ) {
+    end = (if (greater_than (add at (length with)) (length in)) { 
+      <- (length in) 
+    } { 
+      <- (add at (length with))
+    })
+    trimmed = (if (greater_than (subtract end at) 0) {
+      <- (get with 0 (subtract end at))
+    } {
+      <- ""
+    })
+    cleaned = (if (less_than at end) {
+      <- (delete in at end)
+    }{
+      <- in
+    })
+    <- (if (less_than at end) {
+      <- (insert cleaned trimmed at)
+    }{
+      <- in
+    })
+  } (and 
+    (is (type in) "list")
+    (is (type with) "list")
+  ) {
+    <- (map in { item index -> 
+      end = (add at (length with) )
+      <- (if (and
+        (greater_than index (subtract at 1))
+        (less_than index end) 
+      ) {
+        <- (get with (subtract index at))
+      } {
+        <- item
+      })
+    })
+  } {
+    <- in
   })
 }
 
-// game rules
+//*** game rules
 wordle_highlight = { guess_arr answer_arr ->
   exact = 2
   exists = 1
   does_not_exist = 0
 
-  // first step - "punch" correct matches out of possible"
+  // first step - "punch" correct matches out of possible
   answer_map = (map answer_arr {item index -> 
     <- (if (is item (get guess_arr index)) {
       <- "-"
@@ -80,6 +115,7 @@ wordle_highlight = { guess_arr answer_arr ->
   })
 
   // second step "reduce" array into a list that remembers the punching
+  // then return the final list
   <- (get
     (reduce guess_arr { accum guess_item guess_index ->
       curr__answer_map = (get accum 1)
@@ -101,7 +137,7 @@ wordle_highlight = { guess_arr answer_arr ->
   0)
 }
 
-get_letter_status = { letter pos guess_arr answer_arr ->
+get_letter_status = { pos guess_arr answer_arr ->
   <- (get (wordle_highlight guess_arr answer_arr) pos)
 }
 
@@ -123,6 +159,7 @@ is_valid_key = { keypress_name ->
   <- (not (is (find letters keypress_name) void))
 }
 
+// encapsulate anything that can happen in the game
 mutaute_state_on_input = { state keypress_name ->
   <- (if (is (get state GAME) 0) { // in play
     index_in_play = (get state INPLAY)
@@ -219,6 +256,121 @@ mutaute_state_new_game = {
   state = (set state (list) USED)
   <- state
 }
+
+//*** animators
+// animation is done by "blocking" the loop using wait
+reveal_animator = {
+  props = (dynamic_props board void)
+  index_in_play = (get state INPLAY)
+  line_in_play = (get (get state STATUS) index_in_play)
+
+  props = (list
+    (get props X)
+    (add (get props Y) (multiply index_in_play 3))
+    (list
+      (list "┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐")
+      (list 
+        "│"" " (get line_in_play 0) " ""│"
+        "│"" " (get line_in_play 1) " ""│"
+        "│"" " (get line_in_play 2) " ""│"
+        "│"" " (get line_in_play 3) " ""│"
+        "│"" " (get line_in_play 4) " ""│"
+      )
+      (list "└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘")
+    )
+  )
+
+  guess_arr = (get (get state STATUS) index_in_play)
+  answer_arr = (str_to_arr (get state ANSWER))
+
+  (reduce (range 5) { look item index -> 
+    letter_status = (get_letter_status index guess_arr answer_arr)
+
+    top = (replace (get look 0) (list " "" "" "" "" ") (multiply index 5))
+    middle = (replace (get look 1) (list "─""─""─""─""─") (multiply index 5))
+    bottom = (replace (get look 2) (list " "" "" "" "" ") (multiply index 5))
+
+    look = (list
+      top
+      middle
+      bottom
+    )
+
+    props = (set props look 2)
+    (draw props)
+    (wait 0.3)
+
+    top = (replace (get look 0) (set_background letter_status (list "┌""─""─""─""┐")) (multiply index 5))
+    middle = (replace (get look 1) (set_background letter_status (list "│"" " (get line_in_play index) " ""│")) (multiply index 5))
+    bottom = (replace (get look 2) (set_background letter_status (list "└""─""─""─""┘")) (multiply index 5))
+
+    look = (list
+      top
+      middle
+      bottom
+    )
+
+    props = (set props look 2)
+    (draw props)
+    (wait 0.3)
+
+    <- look
+  } (get props 2))
+}
+
+invalid_word_animator = {
+  props = (dynamic_props board void)
+  index_in_play = (get state INPLAY)
+  line_in_play = (get (get state STATUS) index_in_play)
+
+  props = (list
+    (get props X)
+    (add (get props Y) (multiply index_in_play 3))
+    (list
+      (list "┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐")
+      (list 
+        "│"" " (get line_in_play 0) " ""│"
+        "│"" " (get line_in_play 1) " ""│"
+        "│"" " (get line_in_play 2) " ""│"
+        "│"" " (get line_in_play 3) " ""│"
+        "│"" " (get line_in_play 4) " ""│"
+      )
+      (list "└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘")
+    )
+  )
+
+  props = (set props (add (get props X) 1) X)
+  (draw props)
+  (wait 0.05)
+
+  props = (set props (subtract (get props X) 2) X)
+  (draw props)
+  (wait 0.05)
+
+  props = (set props (add (get props X) 2) X)
+  (draw props)
+  (wait 0.05)
+
+  props = (set props (subtract (get props X) 2) X)
+  (draw props)
+  (wait 0.05)
+
+  eraser = (list
+    (get props X)
+    (get props Y)
+    (list
+      (list "                           ")
+      (list "                           ")
+      (list "                           ")
+    )
+  )
+  (draw eraser)
+
+  props = (set props (add (get props X) 1) X)
+  (draw props)
+  (wait 0.05)
+}
+
 //***  settings
 app_width = 80
 app_height = 24
@@ -375,165 +527,6 @@ button_next = ({
   <- (list props (list on_state void void void on_click))
 })
 
-
-replace = { in with at ->
-  <- (if (and 
-    (is (type in) "string")
-    (is (type with) "string")
-  ) {
-    end = (if (greater_than (add at (length with)) (length in)) { 
-      <- (length in) 
-    } { 
-      <- (add at (length with))
-    })
-    trimmed = (if (greater_than (subtract end at) 0) {
-      <- (get with 0 (subtract end at))
-    } {
-      <- ""
-    })
-    cleaned = (if (less_than at end) {
-      <- (delete in at end)
-    }{
-      <- in
-    })
-    
-    <- (if (less_than at end) {
-      <- (insert cleaned trimmed at)
-    }{
-      <- in
-    })
-  } (and 
-    (is (type in) "list")
-    (is (type with) "list")
-  ) {
-    <- (map in { item index -> 
-      end = (add at (length with) )
-      <- (if (and
-        (greater_than index (subtract at 1))
-        (less_than index end) 
-      ) {
-        <- (get with (subtract index at))
-      } {
-        <- item
-      })
-    })
-  } {
-    <- in
-  })
-}
-
-reveal_animator = {
-  props = (dynamic_props board void)
-  index_in_play = (get state INPLAY)
-  line_in_play = (get (get state STATUS) index_in_play)
-
-  props = (list
-    (get props X)
-    (add (get props Y) (multiply index_in_play 3))
-    (list
-      (list "┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐")
-      (list 
-        "│"" " (get line_in_play 0) " ""│"
-        "│"" " (get line_in_play 1) " ""│"
-        "│"" " (get line_in_play 2) " ""│"
-        "│"" " (get line_in_play 3) " ""│"
-        "│"" " (get line_in_play 4) " ""│"
-      )
-      (list "└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘")
-    )
-  )
-
-  guess_arr = (get (get state STATUS) index_in_play)
-  answer_arr = (str_to_arr (get state ANSWER))
-
-  (reduce (range 5) { look item index -> 
-    letter_status = (get_letter_status (get line_in_play index) index guess_arr answer_arr)
-
-    top = (replace (get look 0) (list " "" "" "" "" ") (multiply index 5))
-    middle = (replace (get look 1) (list "─""─""─""─""─") (multiply index 5))
-    bottom = (replace (get look 2) (list " "" "" "" "" ") (multiply index 5))
-
-    look = (list
-      top
-      middle
-      bottom
-    )
-
-    props = (set props look 2)
-    (draw props)
-    (wait 0.3)
-
-    top = (replace (get look 0) (set_background letter_status (list "┌""─""─""─""┐")) (multiply index 5))
-    middle = (replace (get look 1) (set_background letter_status (list "│"" " (get line_in_play index) " ""│")) (multiply index 5))
-    bottom = (replace (get look 2) (set_background letter_status (list "└""─""─""─""┘")) (multiply index 5))
-
-    look = (list
-      top
-      middle
-      bottom
-    )
-
-    props = (set props look 2)
-    (draw props)
-    (wait 0.3)
-
-    <- look
-  } (get props 2))
-}
-
-invalid_word_animator = {
-  props = (dynamic_props board void)
-  index_in_play = (get state INPLAY)
-  line_in_play = (get (get state STATUS) index_in_play)
-
-  props = (list
-    (get props X)
-    (add (get props Y) (multiply index_in_play 3))
-    (list
-      (list "┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐""┌""─""─""─""┐")
-      (list 
-        "│"" " (get line_in_play 0) " ""│"
-        "│"" " (get line_in_play 1) " ""│"
-        "│"" " (get line_in_play 2) " ""│"
-        "│"" " (get line_in_play 3) " ""│"
-        "│"" " (get line_in_play 4) " ""│"
-      )
-      (list "└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘""└""─""─""─""┘")
-    )
-  )
-
-  props = (set props (add (get props X) 1) X)
-  (draw props)
-  (wait 0.05)
-
-  props = (set props (subtract (get props X) 2) X)
-  (draw props)
-  (wait 0.05)
-
-  props = (set props (add (get props X) 2) X)
-  (draw props)
-  (wait 0.05)
-
-  props = (set props (subtract (get props X) 2) X)
-  (draw props)
-  (wait 0.05)
-
-  eraser = (list
-    (get props X)
-    (get props Y)
-    (list
-      (list "                           ")
-      (list "                           ")
-      (list "                           ")
-    )
-  )
-  (draw eraser)
-
-  props = (set props (add (get props X) 1) X)
-  (draw props)
-  (wait 0.05)
-}
-
 board = ({
   props = (list
     9
@@ -586,7 +579,7 @@ board = ({
             <- (if (is letter " ") {
               <- letter
             } {
-              letter_status = (get_letter_status letter c guess_arr answer_arr)
+              letter_status = (get_letter_status c guess_arr answer_arr)
               <- (set_background letter_status letter)
             })
           })
@@ -597,7 +590,7 @@ board = ({
             <- (if (is letter " ") {
               <- item
             } {
-              letter_status = (get_letter_status letter c guess_arr answer_arr)
+              letter_status = (get_letter_status c guess_arr answer_arr)
               <- (set_background letter_status item)
             })
           })
@@ -630,7 +623,7 @@ answer = ({
     })
 
     (if (not (is curr prev)) {
-      (if (is (get state GAME) 1) {
+      (if (is (get state GAME) 1) { // win
         // 1: Genius 2: Magnificent 3: Impressive 4: Splendid 5: Great 6: Phew
         index_in_play = (get state INPLAY)
         word_index = (get state WORD_INDEX)
@@ -661,10 +654,10 @@ answer = ({
         })
         mapped = (join "Wordle #" (string (get state WORD_INDEX)) " " (get state ANSWER) "      ")
         (draw (dynamic_props answer mapped))
-      } (is (get state GAME) 2) {
+      } (is (get state GAME) 2) { // loss
         mapped = (join "Wordle #" (string (get state WORD_INDEX)) " " (inverse (get state ANSWER)) "      ")
         (draw (dynamic_props answer mapped))
-      } {
+      } { // in play
         mapped = (join "Wordle #" (string (add (get state WORD_INDEX) 1)) " " "?????")
         (draw (dynamic_props answer mapped))
       })
@@ -687,7 +680,6 @@ results = ({
       "Max Streak: 0"
     )
   )
-
 
   on_state = {
     // only redrew when change is relevant
@@ -794,7 +786,7 @@ create_element_key = { x y letter ->
             <- (if (is guessed_pos void) {
               <- accum
             }{
-              letter_status = (get_letter_status letter guessed_pos guess_arr answer_arr)
+              letter_status = (get_letter_status guessed_pos guess_arr answer_arr)
 
               <- (if (greater_than letter_status accum){
                 <- letter_status
