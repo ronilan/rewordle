@@ -52,10 +52,3 @@ state = (use "./usables/tui.crumb" "./usables/colors.crumb" "./src/elements.crum
 
   <- (start state elements)
 })
-
-results_string = (delete (reduce (get state RESULTS) { accum item _ -> <- (join accum ":" (string item)) } "") 0)
-streak_string = (delete (reduce (get state STREAK) { accum item _ -> <- (join accum ":" (string item)) } "") 0)
-
-(use "./src/storage.crumb" {
-  (save state)
-})

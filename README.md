@@ -36,16 +36,16 @@ Run:
 
 Build: 
 ```
-docker build -t colors.crumb git@github.com:ronilan/colors.crumb.git#main
+docker build -t rewordle.crumb git@github.com:ronilan/rewordle.crumb.git#main
 ```
 Run: 
 ```
-docker run --rm -it colors.crumb
+docker run --rm -it rewordle.crumb
 ```
 
 Or "all in one": 
 ```
-docker run --rm -it $(docker build -q git@github.com:ronilan/colors.crumb.git#main)
+docker run --rm -it $(docker build -q git@github.com:ronilan/rewordle.crumb.git#main)
 ```
 
 Then in the shell: 
@@ -55,7 +55,7 @@ Then in the shell:
 
 # Use
 
-> IMPORTANT: Keyboard input has **severe** latency. This is the result of an implementation detail of the Crumb interpreter. A fix is forthcoming. Some day, but not today.
+> IMPORTANT: Keyboard input has **severe** latency. It may feel like it is not responding. This is the result of an implementation detail of the Crumb interpreter. A fix is forthcoming. Some day, but not today.
 
 Play it like Wordle!
 
