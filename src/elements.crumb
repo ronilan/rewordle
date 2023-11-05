@@ -683,11 +683,11 @@ results = ({
 
   on_state = {
     // only redrew when change is relevant
-    curr = (list (get state USED) (get state APP_XY))
+    curr = (list (get state GAME) (get state APP_XY))
     prev = (if (is prev_state void) {
       <- void
     } {
-      <- (list (get prev_state USED) (get prev_state APP_XY))
+      <- (list (get prev_state GAME) (get prev_state APP_XY))
     })
 
     (if (not (is curr prev)) {
