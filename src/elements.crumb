@@ -200,6 +200,8 @@ mutate_state_on_input = { state keypress_name ->
 
           <- (set state 1 GAME)
         } (is (get state INPLAY) 5) { // last attempt - lost
+          // set next word
+          state = (set state (add (get state WORD_INDEX) 1) WORD_INDEX)
           // update win stats
           // results
           state = (set state (set (get state RESULTS) (add (get (get state RESULTS) 6) 1) 6 ) RESULTS)
