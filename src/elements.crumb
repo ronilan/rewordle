@@ -784,18 +784,20 @@ create_element_key = { x y letter ->
         final_letter_status = (reduce (get state STATUS) {accum guess_arr index ->
           answer_arr = (str_to_arr (get state ANSWER))
 
-          guessed_pos = (find guess_arr letter)
-          <- (if (is guessed_pos void) {
-            <- accum
-          }{
-            letter_status = (get_letter_status guessed_pos guess_arr answer_arr)
+          // guess array may include more than one occurrence of a letter.
+          <- (reduce guess_arr {a item index ->
+            <- (if (is item letter) {
+              letter_status = (get_letter_status index guess_arr answer_arr)
 
-            <- (if (greater_than letter_status accum){
-              <- letter_status
-            }{
-              <- accum
+              <- (if (greater_than letter_status accum){
+                <- letter_status
+              }{
+                <- a
+              })
+            } {
+              <- a
             })
-          })
+          } accum)
         } 0)
 
         <- (set_background final_letter_status look)
