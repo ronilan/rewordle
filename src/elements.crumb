@@ -705,7 +705,7 @@ results = ({
       look = (list
         (join "Played: " (string p)) 
         (join "Win %: " (string win%))
-        (join "Streak: " (string (get (get state STREAK) 0)))
+        (join "Streak: " (string (get (get state STREAK) 0)) "  ")
         (join "Max Streak: " (string (get (get state STREAK) 1)))
       )
 
