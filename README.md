@@ -55,8 +55,6 @@ Then in the shell:
 
 # Use
 
-> IMPORTANT: Keyboard input has **severe** latency. It may feel like it is not responding. This is the result of an implementation detail of the Crumb interpreter. A fix is forthcoming. Some day, but not today.
-
 Play it like Wordle!
 
 ###### Fabriqué au Canada : Made in Canada 🇨🇦
