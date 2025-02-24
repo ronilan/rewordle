@@ -14,8 +14,8 @@ Y = 1
 
 state = (use "./usables/tui.crumb" "./usables/colors.crumb" "./src/elements.crumb" "./src/storage.crumb" {
   // game rules
-  valid_words = (read_file "./data/valid.txt")
-  play_words = (read_file "./data/play.txt")
+  valid_words = (use "./data/valid.crumb" {<- valid_words})
+  play_words = (use "./data/play.crumb" {<- play_words})
 
   from_storage = (read)
 
