@@ -8,7 +8,15 @@ It's written in [Crumb](https://github.com/liam-ilan/crumb).
 
 # Install
 
-Running Crumb programs requires building the Crumb interpreter from source. That can be done locally, or within a Docker container.
+## Pre Built Binaries
+
+Pre built binaries are provided for each [release](https://github.com/ronilan/crumbicon/releases).
+
+Note: `*-macos-15.tar.gz` is for Apple Silicon, `*-macos-13.tar.gz` is for Intel CPU.
+
+# From Source
+
+Building the app and toolchain from from source can be done locally, or within a Docker container that has a mounted volume to save drawn icons.
 
 ### Locally
 
@@ -22,14 +30,24 @@ CD into directory:
 cd rewordle
 ```
 
-Build Crumb interpreter: 
+Build Crumb Interpreter and Loaf Bundler: 
 ```
-chmod +x build-crumb.sh && ./build-crumb.sh
+chmod +x setup.sh && ./setup.sh
 ```
 
-Run:
+Run (using interpreter):
 ```
 ./crumb rewordle.crumb
+```
+
+Build:
+```
+./loaf rewordle.crumb rewordle
+```
+
+Run (as stand alone executable):
+```
+./rewordle
 ```
 
 ### With Docker:
@@ -50,7 +68,7 @@ docker run --rm -it $(docker build -q git@github.com:ronilan/rewordle.git#main)
 
 Then in the shell: 
 ```
-./crumb rewordle.crumb
+./rewordle
 ```
 
 # Use
