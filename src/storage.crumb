@@ -25,7 +25,7 @@ prep_string = { state key ->
 }
 
 save = { state -> 
-  (write_file "data/.rewordle" (join 
+  (write_file ".rewordle" (join 
     (prep_string state RESULTS) "\n" 
     (prep_string state STREAK) "\n" 
     (string (get state WORD_INDEX))
@@ -33,7 +33,7 @@ save = { state ->
 }
 
 read = {
-  status = (read_file "./data/.rewordle")
+  status = (read_file ".rewordle")
   <- (if (is status void) {
     <- (list "0:0:0:0:0:0:0" "0:0" "0")
   } {

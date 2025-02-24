@@ -30,7 +30,7 @@ crumb
 loaf
 
 # do not include user data
-data/.rewordle
+.rewordle
 
 # do not include me as executable
 **/rewordle
