@@ -25,8 +25,12 @@ node_modules/
 # in case
 .npmrc
 
-# do not include Crumb interpreter
+# do not include Crumb interpreter and bundler
 crumb
+loaf
 
 # do not include user data
 data/.rewordle
+
+# do not include me as executable
+**/rewordle
