@@ -1,5 +1,5 @@
 env:
-  APP_NAME: "crumbicon"
+  APP_NAME: "rewordle"
 
 name: Build Release Binaries
 
